@@ -2,17 +2,19 @@
 layout: default
 ---
 
-# Quasiquotes guide
+# Quasi-quotes guide
 
 ## Intro
 ## Cardinality
 ## Lifting and Unlifting
+## Referential transparency
 ## Syntax summary
 ### Expressions
 
 
  Tree             | Quasi-quote                                                 
 ------------------|------------------------------------------------------------
+ Empty Tree       | `q""`
  If               | `q"if ($cond) $thenp else $elsep"`                             
  Application      | `q"$f(...$args)"`                                          
  Type Application | `q"$f[..$targs]"`                                          
@@ -40,6 +42,7 @@ layout: default
 
  Tree             | Quasi-quote                               
 ------------------|-------------------------------------------
+ Empty Type Tree  | `tq""`
  Identifier       | `tq"$name"` where `name: TypeName` or `tq"Name"`
  Applied Type     | `tq"$name[..$targs]"` 
  Tuple Type       | `tq"(..$elements)"`
@@ -48,6 +51,7 @@ layout: default
  Type Selection   | `tq"$tpt#$name"`
  Dependent Type   | `tq"$prefix.$name"`
  Refined Type (!) | `tq"..$parents { ..$definitions }"`
+ Singleton Type   | `tq"$ref.type"`
 
 ### Patterns
  
