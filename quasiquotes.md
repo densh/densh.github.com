@@ -12,14 +12,12 @@ layout: default
 
 ### Abbreviations
 
-* `name: TermName|TypeName`
 * `tname: TermName`
 * `tpname: TypeName`
 * `value: Byte|Short|Int|Long|Float|Double|Boolean|String|Unit`
 * `expr: Tree` that contains expression
 * `tpt: Tree` that contains representation of a type
 * `pat: Tree` that contains pattern
-* `ref: Tree` that contains a reference (i.e. Identifier or Selection)
 * `args: List[Tree]` where each element is a parameter
 * `argss: List[List[Tree]]` where each element is a parameter
 * `targs: List[Tree]` where each element is a type argument
@@ -30,6 +28,7 @@ layout: default
 * `stats: List[Tree]` where each element is either an expression or definition
 * `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
 * `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
+* `sels: List[Tree]` where each element is an import selector
 
 ### Expressions
 
@@ -41,7 +40,7 @@ layout: default
  This             | `q"this"`                                                   | This
  Application      | `q"$expr(...$argss)"`                                       | Apply
  Type Application | `q"$expr[..$targs]"`                                        | TypeApply
- Selection        | `q"$expr.$name"`                                            | Select
+ Selection        | `q"$expr.$tname"`                                            | Select
  Assign           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
  Update           | `q"$expr(..$exprs) = $expr"`                                | Tree
  Return           | `q"return $expr"`                                           | Return
@@ -69,8 +68,8 @@ layout: default
  Tuple Type       | `tq"(..$tpts)"`                       | Tree
  Function Type    | `tq"(..$tpts) => $tpt"`               | Tree
  Existential Type | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
- Type Selection   | `tq"$tpt#$name"`                      | SelectFromTypeTree
- Dependent Type   | `tq"$ref.$name"`                      | Select
+ Type Selection   | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
+ Dependent Type   | `tq"$ref.$tpname"`                    | Select
  Refined Type (!) | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  Singleton Type   | `tq"$ref.type"`                       | SingletonType
 
@@ -78,9 +77,9 @@ layout: default
  
  Tree             | Quasi-quote           | Type                    
 ------------------|-----------------------|-------------------
- Binding          | `pq"$tname @ $pat"`    | Bind
- Extractor Call   | `pq"$ref(..$pats)"` | Apply, UnApply   
- Type Pattern     | `pq"$tname: $tpt"`     | Typed             
+ Binding          | `pq"$tname @ $pat"`   | Bind
+ Extractor Call   | `pq"$ref(..$pats)"`   | Apply, UnApply   
+ Type Pattern     | `pq"$tname: $tpt"`    | Typed             
  
 ### Definitions
 
@@ -92,10 +91,10 @@ layout: default
  Type           | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
  Class          | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  Trait          | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
- Object         | `q"$mods object $name extends { ..$early } with ..$parents { $self => ..$body }"`                                  | ModuleDef
+ Object         | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
  Package        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
  Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
- Import (!)     | `q"import $selector"`                                                                                              | Import
+ Import         | `q"import $expr.{..$sels}"`                                                                                        | Import
 
 ## Syntax Details 
 
