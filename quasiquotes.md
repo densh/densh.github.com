@@ -9,69 +9,97 @@ layout: default
 ## Lifting and Unlifting
 ## Referential transparency
 ## Syntax summary
+
+### Abbreviations
+
+* `name`: variable of type `TermName` or `TypeName`
+* `tname`: variable of type `TermName`
+* `tpname`: variable of type `TypeName`
+* `expr`: variable of type `Tree` that contains expression
+* `ident`: variable of type `Tree` that contains identifier
+* `tpt`: variable of type `Tree` that contains representation of a type
+* `pat`: varible of type `Tree` that contains pattern
+* `args`: variable of type `List[Tree]` where each element is a parameter
+* `argss`: variable of type `List[List[Tree]]` where each element is a parameter
+* `targs`: variable of type `List[Tree]` where each element is a type argument
+* `enums`: variable of type `List[Tree]` where each element is a for loop enumerator
+* `early`: variable of type `List[Tree]` where each element is early definition
+* `parents`: variable of type `List[Tree]` where each element is a parent
+* `self`: variable of type `Tree` that corresponds to self type definition
+* `stats`: variable of type `List[Tree]` where each element is either an expression or definition
+* `topstats`: variable of type `List[Tree]` where each element is top-level definition
+
 ### Expressions
 
-
- Tree             | Quasi-quote                                                 
-------------------|------------------------------------------------------------
- Empty Tree       | `q""`
- If               | `q"if ($cond) $thenp else $elsep"`                             
- Application      | `q"$f(...$args)"`                                          
- Type Application | `q"$f[..$targs]"`                                          
- Selection        | `q"$obj.$field"`                                              
- Block            | `q"{ ..$block }"`                                          
- New              | `q"new { ..$early } with ..$parents { $self => ..$body }"` 
- Assign           | `q"$lhs = $rhs"`                                           
- Update           | `q"$lhs(..$args) = $rhs"`                                  
- Pattern Match    | `q"$scrutinee match { case ..$cases }"`                    
- Return           | `q"return $expr"`                                          
- For Loop         | `q"for (..$enumerators) $body"`                            
- For-Yield Loop   | `q"for (..$enumerators) yield $body"`                      
- While Loop       | `q"while ($cond) $body"`                                   
- Do While Loop    | `q"do $expr while ($cond)"`                                
- Try              | `q"try $expr catch { case ..$cases } finally $expr"`       
- Ascription       | `q"$expr: $tpt"`                                           
- Constant         | `q"$value"` where `value: AnyVal` or `value: String` or values like `q"1.0"`     
- Identifier       | `q"$name"` where `name: TermName` or `q"Name"`             
- Tuple            | `q"(..$elements)"`
- Function         | `q"(..$args) => $expr"`
- Throw            | `q"throw $expr"`
- This             | `q"this"`
+ Tree             | Quasi-quote                                                 | Type
+------------------|-------------------------------------------------------------|-------------------------
+ Empty            | `q""`                                                       | EmptyTree
+ Identifier       | `q"$tname"` or `q"Name"`                                    | Ident
+ Constant         | `q"$value"`                                                 | Literal
+ This             | `q"this"`                                                   | This
+ Application      | `q"$expr(...$argss)"`                                       | Apply
+ Type Application | `q"$expr[..$targs]"`                                        | TypeApply
+ Selection        | `q"$expr.$name"`                                            | Select
+ Assign           | `q"$ident = $expr"`                                         | Assign, AssignOrNamedArg
+ Update           | `q"$ident(..$exprs) = $expr"`                               | Tree
+ Return           | `q"return $expr"`                                           | Return
+ Throw            | `q"throw $expr"`                                            | Throw
+ Ascription       | `q"$expr: $tpt"`                                            | Typed 
+ Tuple            | `q"(..$exprs)"`                                             | Tree
+ Function         | `q"(..$args) => $expr"`                                     | Function
+ Block            | `q"{ ..$stats }"`                                           | Block
+ If               | `q"if ($expr) $expr else $expr"`                            | If
+ Pattern Match    | `q"$expr match { case ..$cases }"`                          | Match
+ Try              | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
+ While Loop       | `q"while ($expr) $expr"`                                    | LabelDef 
+ Do-While Loop    | `q"do $expr while ($expr)"`                                 | LabelDef
+ For Loop         | `q"for (..$enums) $expr"`                                   | Tree
+ For-Yield Loop   | `q"for (..$enums) yield $expr"`                             | Tree
+ New              | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
 
 ### Types
 
- Tree             | Quasi-quote                               
-------------------|-------------------------------------------
- Empty Type Tree  | `tq""`
- Identifier       | `tq"$name"` where `name: TypeName` or `tq"Name"`
- Applied Type     | `tq"$name[..$targs]"` 
- Tuple Type       | `tq"(..$elements)"`
- Function Type    | `tq"(..$argtpes) => $restpe"`
- Existential Type | `tq"$tpt forSome { ..$definitions }"` 
- Type Selection   | `tq"$tpt#$name"`
- Dependent Type   | `tq"$prefix.$name"`
- Refined Type (!) | `tq"..$parents { ..$definitions }"`
- Singleton Type   | `tq"$ref.type"`
+ Tree             | Quasi-quote                           | Type
+------------------|---------------------------------------|---------------------
+ Empty Type       | `tq""`                                | TypeTree
+ Identifier       | `tq"$tpname"` or `tq"Name"`           | Ident
+ Applied Type     | `tq"$ident[..$tpts]"`                 | AppliedTypeTree
+ Tuple Type       | `tq"(..$tpts)"`                       | Tree
+ Function Type    | `tq"(..$tpts) => $tpt"`               | Tree
+ Existential Type | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
+ Type Selection   | `tq"$tpt#$name"`                      | SelectFromTypeTree
+ Dependent Type   | `tq"$ref.$name"`                      | Select
+ Refined Type (!) | `tq"..$parents { ..$definitions }"`   | CompoundTypeTree
+ Singleton Type   | `tq"$ref.type"`                       | SingletonType
 
 ### Patterns
  
- Tree             | Quasi-quote                                
-------------------|-------------------------------------------
- Binding          | `pq"$name @ $pat"` where `name: TermName` 
- Extractor Call   | `pq"$extractor(..$subpatterns)"`          
- Type Pattern     | `pq"$name: $tpt"`                         
+ Tree             | Quasi-quote           | Type                    
+------------------|-----------------------|-------------------
+ Binding          | `pq"$name @ $pat"`    | Bind
+ Extractor Call   | `pq"$ident(..$pats)"` | Apply, UnApply   
+ Type Pattern     | `pq"$name: $tpt"`     | Typed             
  
 ### Definitions
 
- Tree           | Quasi-quote                                                        
-----------------|------------------------------------------------------------------
- Def            | `q"$mods def $name[..$targs](...$argss): $restpe = $body"`
- Val            | `q"$mods val $name: $tpt = $rhs"` or `q"$mods val $pattern = $rhs"`                      
- Var            | `q"$mods var $name: $tpt = $rhs"` or `q"$mods val $pattern = $rhs"`                       
- Class          | `q"$mods class $name[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$body }"` 
- Trait          | `q"$mods trait $name[..$targs] extends { ..$early } with ..$parents { $self => ..$body }"` 
- Object         | `q"package object $name extends { ..$early } with ..$parents { $self => ..$body }"`
- Package        | `q"package $name { ..$body }"`
- Package Object | `q"package object $name extends { ..$early } with ..$parents { $self => ..$body }"`
- Import (!)     | `q"import $selector"`
- 
+ Tree           | Quasi-quote                                                                                                        | Type 
+----------------|--------------------------------------------------------------------------------------------------------------------|-----------
+ Def            | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
+ Val            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ Var            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ Type           | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
+ Class          | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
+ Trait          | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
+ Object         | `q"$mods object $name extends { ..$early } with ..$parents { $self => ..$body }"`                                  | ModuleDef
+ Package        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
+ Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
+ Import (!)     | `q"import $selector"`                                                                                              | Import
+
+## Syntax Details 
+
+### Expressions
+
+### Types
+
+### Patterns
+
