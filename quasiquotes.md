@@ -12,22 +12,24 @@ layout: default
 
 ### Abbreviations
 
-* `name`: variable of type `TermName` or `TypeName`
-* `tname`: variable of type `TermName`
-* `tpname`: variable of type `TypeName`
-* `expr`: variable of type `Tree` that contains expression
-* `ident`: variable of type `Tree` that contains identifier
-* `tpt`: variable of type `Tree` that contains representation of a type
-* `pat`: varible of type `Tree` that contains pattern
-* `args`: variable of type `List[Tree]` where each element is a parameter
-* `argss`: variable of type `List[List[Tree]]` where each element is a parameter
-* `targs`: variable of type `List[Tree]` where each element is a type argument
-* `enums`: variable of type `List[Tree]` where each element is a for loop enumerator
-* `early`: variable of type `List[Tree]` where each element is early definition
-* `parents`: variable of type `List[Tree]` where each element is a parent
-* `self`: variable of type `Tree` that corresponds to self type definition
-* `stats`: variable of type `List[Tree]` where each element is either an expression or definition
-* `topstats`: variable of type `List[Tree]` where each element is top-level definition
+* `name: TermName|TypeName`
+* `tname: TermName`
+* `tpname: TypeName`
+* `value: Byte|Short|Int|Long|Float|Double|Boolean|String|Unit`
+* `expr: Tree` that contains expression
+* `tpt: Tree` that contains representation of a type
+* `pat: Tree` that contains pattern
+* `ref: Tree` that contains a reference (i.e. Identifier or Selection)
+* `args: List[Tree]` where each element is a parameter
+* `argss: List[List[Tree]]` where each element is a parameter
+* `targs: List[Tree]` where each element is a type argument
+* `enums: List[Tree]` where each element is a for loop enumerator
+* `early: List[Tree]` where each element is early definition
+* `parents: List[Tree]` where each element is a parent
+* `self: Tree` that corresponds to self type definition
+* `stats: List[Tree]` where each element is either an expression or definition
+* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
+* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
 
 ### Expressions
 
@@ -40,8 +42,8 @@ layout: default
  Application      | `q"$expr(...$argss)"`                                       | Apply
  Type Application | `q"$expr[..$targs]"`                                        | TypeApply
  Selection        | `q"$expr.$name"`                                            | Select
- Assign           | `q"$ident = $expr"`                                         | Assign, AssignOrNamedArg
- Update           | `q"$ident(..$exprs) = $expr"`                               | Tree
+ Assign           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
+ Update           | `q"$expr(..$exprs) = $expr"`                                | Tree
  Return           | `q"return $expr"`                                           | Return
  Throw            | `q"throw $expr"`                                            | Throw
  Ascription       | `q"$expr: $tpt"`                                            | Typed 
@@ -63,22 +65,22 @@ layout: default
 ------------------|---------------------------------------|---------------------
  Empty Type       | `tq""`                                | TypeTree
  Identifier       | `tq"$tpname"` or `tq"Name"`           | Ident
- Applied Type     | `tq"$ident[..$tpts]"`                 | AppliedTypeTree
+ Applied Type     | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
  Tuple Type       | `tq"(..$tpts)"`                       | Tree
  Function Type    | `tq"(..$tpts) => $tpt"`               | Tree
  Existential Type | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
  Type Selection   | `tq"$tpt#$name"`                      | SelectFromTypeTree
  Dependent Type   | `tq"$ref.$name"`                      | Select
- Refined Type (!) | `tq"..$parents { ..$definitions }"`   | CompoundTypeTree
+ Refined Type (!) | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  Singleton Type   | `tq"$ref.type"`                       | SingletonType
 
 ### Patterns
  
  Tree             | Quasi-quote           | Type                    
 ------------------|-----------------------|-------------------
- Binding          | `pq"$name @ $pat"`    | Bind
- Extractor Call   | `pq"$ident(..$pats)"` | Apply, UnApply   
- Type Pattern     | `pq"$name: $tpt"`     | Typed             
+ Binding          | `pq"$tname @ $pat"`    | Bind
+ Extractor Call   | `pq"$ref(..$pats)"` | Apply, UnApply   
+ Type Pattern     | `pq"$tname: $tpt"`     | Typed             
  
 ### Definitions
 
