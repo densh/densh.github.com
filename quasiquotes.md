@@ -40,7 +40,7 @@ layout: default
  This             | `q"this"`                                                   | This
  Application      | `q"$expr(...$argss)"`                                       | Apply
  Type Application | `q"$expr[..$targs]"`                                        | TypeApply
- Selection        | `q"$expr.$tname"`                                            | Select
+ Selection        | `q"$expr.$tname"`                                           | Select
  Assign           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
  Update           | `q"$expr(..$exprs) = $expr"`                                | Tree
  Return           | `q"return $expr"`                                           | Return
@@ -70,7 +70,7 @@ layout: default
  Existential Type | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
  Type Selection   | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
  Dependent Type   | `tq"$ref.$tpname"`                    | Select
- Refined Type (!) | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
+ Refined Type     | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  Singleton Type   | `tq"$ref.type"`                       | SingletonType
 
 ### Patterns
@@ -88,13 +88,15 @@ layout: default
  Def            | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  Val            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  Var            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ Val Pattern    | `q"$mods val $pat = $expr"`                                                                                        | Tree
+ Var Pattern    | `q"$mods var $pat = $expr"`                                                                                        | Tree
  Type           | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
  Class          | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  Trait          | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
  Object         | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
  Package        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
  Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
- Import         | `q"import $expr.{..$sels}"`                                                                                        | Import
+ Import         | `q"import $ref.{..$sels}"`                                                                                         | Import
 
 ## Syntax Details 
 
@@ -104,3 +106,4 @@ layout: default
 
 ### Patterns
 
+### Definitions
