@@ -77,8 +77,10 @@ layout: default
  
  Tree             | Quasi-quote           | Type                    
 ------------------|-----------------------|-------------------
+ Wildcard         | `pq"_"`               | Ident
  Binding          | `pq"$tname @ $pat"`   | Bind
  Extractor Call   | `pq"$ref(..$pats)"`   | Apply, UnApply   
+ Tuple            | `pq"(..$pats)"`       | Apply, UnApply
  Type Pattern     | `pq"$tname: $tpt"`    | Typed             
  
 ### Definitions
@@ -88,8 +90,8 @@ layout: default
  Def            | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  Val            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  Var            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- Val Pattern    | `q"$mods val $pat = $expr"`                                                                                        | Tree
- Var Pattern    | `q"$mods var $pat = $expr"`                                                                                        | Tree
+ Val Pattern    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
+ Var Pattern    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
  Type           | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
  Class          | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  Trait          | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
