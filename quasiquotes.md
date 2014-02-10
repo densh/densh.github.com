@@ -113,12 +113,12 @@ All examples in this guide are run in the repl with one extra import:
 
 #### Empty <a name="emptyexpr"> </a>
 
-Empty expression (`q""`) is used to indicate that some part of the syntactic expressions is not provided by the user:
+`q""` is used to indicate that some part of the syntactic expressions is not provided by the user:
 
 1. Vals, Vars and Defs without right-hand side have it set to `q""`.
-2. Type definitions without bounds have them set to q"".
-3. Try without finally clause have it set to `q""`.
-4. Case clause without guard has it set to `q""`.
+2. Type definitions without bounds have them set to `q""`.
+3. Try expressions without finally clause have it set to `q""`.
+4. Case clauses without guards have them set to `q""`.
 
 #### Identifier <a name="ident"> </a>
 
@@ -138,7 +138,23 @@ Empty expression (`q""`) is used to indicate that some part of the syntactic exp
 
 #### Return <a name="return"> </a>
 
+Return expressions is used to perform early return from the function. 
+
+    scala> val ret = q"return 2 + 2"
+    ret: reflect.runtime.universe.Return = return 2.$plus(2)
+
+    scala> val q"return $expr" = ret 
+    expr: reflect.runtime.universe.Tree = 2.$plus(2)
+
 #### Throw <a name="throw"> </a>
+
+Throw expression is used to throw a throwable:
+
+    scala> val thr = q"throw new Exception"
+    thr: reflect.runtime.universe.Throw = throw new Exception()
+
+    scala> val q"throw $expr" = thr 
+    expr: reflect.runtime.universe.Tree = new Exception()
 
 #### Ascription <a name="ascr"> </a>
 
