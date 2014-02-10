@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Quasi-quotes guide
+# Quasi-quote guide
 
 ## Prerequisties
 
@@ -310,6 +310,25 @@ No-else clause is equivalent to else clause that contains a unit literal.
 #### Pattern Match <a name="match"> </a>
 
 #### Try <a name="try"> </a>
+
+Try expression is used to handle possible error conditions and ensure consistent state via finally. Both error handling cases and finally clause are optional.
+
+    scala> val q"try $a catch { case ..$b } finally $c" = q"try t"
+    a: reflect.runtime.universe.Tree = t
+    b: List[reflect.runtime.universe.CaseDef] = List()
+    c: reflect.runtime.universe.Tree = <empty>
+
+    scala> val q"try $a catch { case ..$b } finally $c" = q"try t catch { case _: C => }"
+    a: reflect.runtime.universe.Tree = t
+    b: List[reflect.runtime.universe.CaseDef] = List(case (_: C) => ())
+    c: reflect.runtime.universe.Tree = <empty>
+
+    scala> val q"try $a catch { case ..$b } finally $c" = q"try t finally f"
+    a: reflect.runtime.universe.Tree = t
+    b: List[reflect.runtime.universe.CaseDef] = List()
+    c: reflect.runtime.universe.Tree = f
+
+Similarly to pattern matching cases can be further deconstructed with `cq"..."`. 
 
 #### While Loop <a name="while"> </a>
 
