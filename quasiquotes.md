@@ -330,11 +330,26 @@ No-else clause is equivalent to else clause that contains a unit literal.
 
 #### Pattern Match <a name="match"> </a>
 
-Pattern matching is cornerstone feature of Scala that lets you deconstruct values into their components. The syntax is quite simple yet powerful:
+Pattern matching is cornerstone feature of Scala that lets you deconstruct values into their components:
     
     q"$expr match { case ..$cases } "
 
-Each case is represented with 
+Where each case is represented with a `cq"..."` quote:
+
+    cq"$pat if $expr => $expr" 
+
+Combination of the two forms allows to construct and deconstruct arbitrary pattern matches:
+
+    scala> val q"$expr match { case ..$cases }" = 
+               q"foo match { case _: Foo => 'foo case _ => 'notfoo }"
+    expr: reflect.runtime.universe.Tree = foo
+    cases: List[reflect.runtime.universe.CaseDef] = List(case (_: Foo) => scala.Symbol("foo"), case _ => scala.Symbol("notfoo"))
+
+    scala> val cq"$pat1 => $body1" :: cq"$pat2 => $body2" :: Nil = cases
+    pat1: reflect.runtime.universe.Tree = (_: Foo)
+    body1: reflect.runtime.universe.Tree = scala.Symbol("foo")
+    pat2: reflect.runtime.universe.Tree = _
+    body2: reflect.runtime.universe.Tree = scala.Symbol("notfoo")
 
 #### Try <a name="try"> </a>
 
@@ -355,7 +370,7 @@ Try expression is used to handle possible error conditions and ensure consistent
     b: List[reflect.runtime.universe.CaseDef] = List()
     c: reflect.runtime.universe.Tree = f
 
-Similarly to pattern matching cases can be further deconstructed with `cq"..."`. 
+Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
 
 #### While and Do-While Loops <a name="while"> </a>
 
