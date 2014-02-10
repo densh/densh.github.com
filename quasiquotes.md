@@ -16,13 +16,13 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Interpolators
 
-    | Usage
+    | Used for 
 ----|----------------------------------------------------------------
  q  | [expressions](#exprs-summary) and [definitions](#defns-summary)
  tq | [types](#types-summary)
  pq | [patterns](#pats-summary)
- cq | [case clause](#match)
- fq | [for loop enumerator](#for)
+ cq | [case clause](#aux-summary)
+ fq | [for loop enumerator](#aux-summary)
 
 ## Lifting and Unlifting
 
@@ -122,6 +122,7 @@ All examples in this guide are run in the repl with one extra import:
  Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
  Import         | `q"import $ref.{..$sels}"`                                                                                         | Import
 
+### Auxiliary <a name="aux-summary"> </a>
                                      | Quasi-quote                 | Type
 -------------------------------------|-----------------------------|--------
  [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
