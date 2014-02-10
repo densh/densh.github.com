@@ -44,7 +44,8 @@ All examples in this guide are run in the repl with one extra import:
  [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
  [Identifier](#ident)                   | `q"$tname"` or `q"Name"`                                    | Ident
  [Constant](#constant)                  | `q"$value"`                                                 | Literal
- [This](#this)                          | `q"this"`                                                   | This
+ [This](#this-super)                    | `q"$tpname.this"`                                           | This
+ [Super](#this-super)                   | `q"$tpname.super[$tpname].$tname"`                          | Tree
  [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
  [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
  [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
@@ -79,6 +80,7 @@ All examples in this guide are run in the repl with one extra import:
  Dependent Type   | `tq"$ref.$tpname"`                    | Select
  Refined Type     | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  Singleton Type   | `tq"$ref.type"`                       | SingletonType
+ Super Type       | `tq"$tpname.super[$tpname].$tpname"`  | Tree
 
 ### Patterns
  
@@ -124,7 +126,36 @@ All examples in this guide are run in the repl with one extra import:
 
 #### Constant <a name="constant"> </a>
 
-#### This <a name="this"> </a>
+#### This and Super <a name="this-super"> </a>
+
+This and super expressions allow to select precise members within inheritance chain.
+
+This tree supports following variations:
+
+    scala> val q"$name.this" = q"this"
+    name: reflect.runtime.universe.TypeName =
+
+    scala> val q"$name.this" = q"foo.this"
+    name: reflect.runtime.universe.TypeName = foov
+
+So plain `q"this"` is equivalent to `q"${tpnme.EMPTY}.this"`. 
+
+Similarly for super we have:
+
+    scala> val q"$name.super[$qual].$field" = q"super.foo"
+    name: reflect.runtime.universe.TypeName =
+    qual: reflect.runtime.universe.TypeName =
+    field: reflect.runtime.universe.Name = foo
+
+    scala> val q"$name.super[$qual].$field" = q"super[T].foo"
+    name: reflect.runtime.universe.TypeName =
+    qual: reflect.runtime.universe.TypeName = T
+    field: reflect.runtime.universe.Name = foo
+
+    scala> val q"$name.super[$qual].$field" = q"other.super[T].foo"
+    name: reflect.runtime.universe.TypeName = other
+    qual: reflect.runtime.universe.TypeName = T
+    field: reflect.runtime.universe.Name = foo
 
 #### Application <a name="application"> </a>
 
