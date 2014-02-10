@@ -2,7 +2,7 @@
 layout: default
 ---
 
-# Quasi-quote guide
+# Quasi-quote guide (WIP)
 
 ## Prerequisties
 
