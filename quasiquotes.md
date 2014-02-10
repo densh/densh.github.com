@@ -22,9 +22,9 @@ All examples in this guide are run in the repl with one extra import:
 * `tname: TermName`
 * `tpname: TypeName`
 * `value: Byte|Short|Int|Long|Float|Double|Boolean|String|Unit`
-* `expr: Tree` that contains expression
-* `tpt: Tree` that contains of a type
-* `pat: Tree` that contains pattern
+* `expr: Tree` that contains an expression
+* `tpt: Tree` that contains a type
+* `pat: Tree` that contains a pattern
 * `args: List[Tree]` where each element is a parameter
 * `argss: List[List[Tree]]` where each element is a parameter
 * `targs: List[Tree]` where each element is a type argument
@@ -201,7 +201,7 @@ And unit as nullary tuple:
 
 #### Block <a name="block"> </a>
 
-Blocks are a fundamental primitive to express sequence of actions or bindings in scala program. `q""` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
+Blocks are a fundamental primitive to express sequence of actions or bindings. `q"..."` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
 
     scala> val t = q"a; b; c" 
     t: reflect.runtime.universe.Tree =
