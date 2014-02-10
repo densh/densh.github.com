@@ -11,10 +11,23 @@ All examples in this guide are run in the repl with one extra import:
     import scala.reflect.runtime.universe._
 
 ## Intro
+
 ## Cardinality
-## Interpolators: q, tq, cq, pq, fq
+
+## Interpolators
+
+    | Usage
+----|----------------------------------------------------------------
+ q  | [expressions](#exprs-summary) and [definitions](#defns-summary)
+ tq | [types](#types-summary)
+ pq | [patterns](#pats-summary)
+ cq | [case clause](#match)
+ fq | [for loop enumerator](#for)
+
 ## Lifting and Unlifting
+
 ## Referential transparency
+
 ## Syntax summary
 
 ### Abbreviation
@@ -37,7 +50,7 @@ All examples in this guide are run in the repl with one extra import:
 * `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
 * `sels: List[Tree]` where each element is an import selector
 
-### Expressions
+### Expressions <a name="exprs-summary"> </a>
 
                                         | Quasi-quote                                                 | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
@@ -61,12 +74,12 @@ All examples in this guide are run in the repl with one extra import:
  [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                          | Match
  [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
  [While Loop](#while)                   | `q"while ($expr) $expr"`                                    | LabelDef 
- [Do-While Loop](#do-while)             | `q"do $expr while ($expr)"`                                 | LabelDef
+ [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                 | LabelDef
  [For Loop](#for)                       | `q"for (..$enums) $expr"`                                   | Tree
- [For-Yield Loop](#for-yield)           | `q"for (..$enums) yield $expr"`                             | Tree
+ [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                             | Tree
  [New](#new)                            | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
 
-### Types
+### Types <a name="types-summary"> </a>
 
                   | Quasi-quote                           | Type
 ------------------|---------------------------------------|---------------------
@@ -82,7 +95,7 @@ All examples in this guide are run in the repl with one extra import:
  Singleton Type   | `tq"$ref.type"`                       | SingletonType
  Super Type       | `tq"$tpname.super[$tpname].$tpname"`  | Tree
 
-### Patterns
+### Patterns <a name="pats-summary"> </a>
  
                   | Quasi-quote           | Type                    
 ------------------|-----------------------|-------------------
@@ -92,7 +105,7 @@ All examples in this guide are run in the repl with one extra import:
  Tuple Pattern    | `pq"(..$pats)"`       | Apply, UnApply
  Type Pattern     | `pq"$tname: $tpt"`    | Typed             
  
-### Definitions
+### Definitions <a name="defns-summary"> </a>
 
                 | Quasi-quote                                                                                                        | Type 
 ----------------|--------------------------------------------------------------------------------------------------------------------|-----------
@@ -108,6 +121,13 @@ All examples in this guide are run in the repl with one extra import:
  Package        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
  Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
  Import         | `q"import $ref.{..$sels}"`                                                                                         | Import
+
+                                     | Quasi-quote                 | Type
+-------------------------------------|-----------------------------|--------
+ [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
+ [Generator Enumerator](#for)        | `fq"$pat <- $expr"`         | Tree
+ [Value Definition Enumerator](#for) | `fq"$pat = $expr"`          | Tree
+ [Guard Enumerator](#for)            | `fq"if $expr"`              | Tree
 
 ## Syntax Details 
 
@@ -309,6 +329,12 @@ No-else clause is equivalent to else clause that contains a unit literal.
 
 #### Pattern Match <a name="match"> </a>
 
+Pattern matching is cornerstone feature of Scala that lets you deconstruct values into their components. The syntax is quite simple yet powerful:
+    
+    q"$expr match { case ..$cases } "
+
+Each case is represented with 
+
 #### Try <a name="try"> </a>
 
 Try expression is used to handle possible error conditions and ensure consistent state via finally. Both error handling cases and finally clause are optional.
@@ -330,13 +356,9 @@ Try expression is used to handle possible error conditions and ensure consistent
 
 Similarly to pattern matching cases can be further deconstructed with `cq"..."`. 
 
-#### While Loop <a name="while"> </a>
+#### While and Do-While Loops <a name="while"> </a>
 
-#### Do-While Loop <a name="do-while"> </a>
-
-#### For Loop <a name="for"> </a>
-
-#### For-Yield Loop <a name="for-yield"> </a>
+#### For and For-Yield Loops <a name="for"> </a>
 
 #### New <a name="new"> </a>
 
