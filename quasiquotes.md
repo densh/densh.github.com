@@ -23,7 +23,7 @@ All examples in this guide are run in the repl with one extra import:
 * `tpname: TypeName`
 * `value: Byte|Short|Int|Long|Float|Double|Boolean|String|Unit`
 * `expr: Tree` that contains expression
-* `tpt: Tree` that contains representation of a type
+* `tpt: Tree` that contains of a type
 * `pat: Tree` that contains pattern
 * `args: List[Tree]` where each element is a parameter
 * `argss: List[List[Tree]]` where each element is a parameter
@@ -39,31 +39,31 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Expressions
 
-                             | Quasi-quote                                                 | Type
------------------------------|-------------------------------------------------------------|-------------------------
- [Empty](#emptyexpr)         | `q""`                                                       | EmptyTree
- [Identifier](#ident)        | `q"$tname"` or `q"Name"`                                    | Ident
- [Constant](#const)          | `q"$value"`                                                 | Literal
- [This](#this)               | `q"this"`                                                   | This
- [Application](#app)         | `q"$expr(...$argss)"`                                       | Apply
- [Type Application] (#tapp)  | `q"$expr[..$targs]"`                                        | TypeApply
- [Selection](#select)        | `q"$expr.$tname"`                                           | Select
- [Assign](#assign)           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
- [Update](#update)           | `q"$expr(..$exprs) = $expr"`                                | Tree
- [Return](#ret)              | `q"return $expr"`                                           | Return
- [Throw](#throw)             | `q"throw $expr"`                                            | Throw
- [Ascription](#ascr)         | `q"$expr: $tpt"`                                            | Typed 
- [Tuple](#tupexpr)           | `q"(..$exprs)"`                                             | Tree
- [Function](#funexpr)        | `q"(..$args) => $expr"`                                     | Function
- [Block](#block)             | `q"{ ..$stats }"`                                           | Block
- [If](#if)                   | `q"if ($expr) $expr else $expr"`                            | If
- [Pattern Match](#match)     | `q"$expr match { case ..$cases }"`                          | Match
- [Try](#try)                 | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
- [While Loop](#while)        | `q"while ($expr) $expr"`                                    | LabelDef 
- [Do-While Loop](#dowhile)   | `q"do $expr while ($expr)"`                                 | LabelDef
- [For Loop](#for)            | `q"for (..$enums) $expr"`                                   | Tree
- [For-Yield Loop](#foryield) | `q"for (..$enums) yield $expr"`                             | Tree
- [New](#new)                 | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
+                                        | Quasi-quote                                                 | Type
+----------------------------------------|-------------------------------------------------------------|-------------------------
+ [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
+ [Identifier](#ident)                   | `q"$tname"` or `q"Name"`                                    | Ident
+ [Constant](#constant)                  | `q"$value"`                                                 | Literal
+ [This](#this)                          | `q"this"`                                                   | This
+ [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
+ [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
+ [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
+ [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
+ [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
+ [Return](#return)                      | `q"return $expr"`                                           | Return
+ [Throw](#throw)                        | `q"throw $expr"`                                            | Throw
+ [Ascription](#ascription)              | `q"$expr: $tpt"`                                            | Typed 
+ [Tuple](#tuple-expr)                   | `q"(..$exprs)"`                                             | Tree
+ [Function](#function-expr)             | `q"(..$args) => $expr"`                                     | Function
+ [Block](#block)                        | `q"{ ..$stats }"`                                           | Block
+ [If](#if)                              | `q"if ($expr) $expr else $expr"`                            | If
+ [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                          | Match
+ [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
+ [While Loop](#while)                   | `q"while ($expr) $expr"`                                    | LabelDef 
+ [Do-While Loop](#do-while)             | `q"do $expr while ($expr)"`                                 | LabelDef
+ [For Loop](#for)                       | `q"for (..$enums) $expr"`                                   | Tree
+ [For-Yield Loop](#for-yield)           | `q"for (..$enums) yield $expr"`                             | Tree
+ [New](#new)                            | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
 
 ### Types
 
@@ -111,7 +111,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Expressions
 
-#### Empty <a name="emptyexpr"> </a>
+#### Empty <a name="empty-expr"> </a>
 
 `q""` is used to indicate that some part of the syntactic expressions is not provided by the user:
 
@@ -122,19 +122,17 @@ All examples in this guide are run in the repl with one extra import:
 
 #### Identifier <a name="ident"> </a>
 
-#### Constant <a name="const"> </a>
+#### Constant <a name="constant"> </a>
 
 #### This <a name="this"> </a>
 
-#### Application <a name="app"> </a>
+#### Application <a name="application"> </a>
 
-#### Type Application <a name="tapp"> </a>
+#### Type Application <a name="type-application"> </a>
 
-#### Selection <a name="select"> </a>
+#### Selection <a name="selection"> </a>
 
-#### Assign <a name="assign"> </a>
-
-#### Update <a name="update"> </a>
+#### Assign and Update <a name="assign-update"> </a>
 
 #### Return <a name="return"> </a>
 
@@ -156,9 +154,9 @@ Throw expression is used to throw a throwable:
     scala> val q"throw $expr" = thr 
     expr: reflect.runtime.universe.Tree = new Exception()
 
-#### Ascription <a name="ascr"> </a>
+#### Ascription <a name="ascription"> </a>
 
-#### Tuple <a name="tupexpr"> </a>
+#### Tuple <a name="tuple-expr"> </a>
 
 Tuples are heteregeneous data structures with built-in user-friendly syntax. The syntax itself is just a sugar that maps onto `scala.TupleN` calls:
 
@@ -199,7 +197,7 @@ And unit as nullary tuple:
     scala> val q"(..$elems)" = q"()"
     elems: List[reflect.runtime.universe.Tree] = List()
 
-#### Function <a name="funexpr"> </a>
+#### Function <a name="function-expr"> </a>
 
 #### Block <a name="block"> </a>
 
@@ -284,11 +282,11 @@ No-else clause is equivalent to else clause that contains a unit literal.
 
 #### While Loop <a name="while"> </a>
 
-#### Do-While Loop <a name="dowhile"> </a>
+#### Do-While Loop <a name="do-while"> </a>
 
 #### For Loop <a name="for"> </a>
 
-#### For-Yield Loop <a name="foryield"> </a>
+#### For-Yield Loop <a name="for-yield"> </a>
 
 #### New <a name="new"> </a>
 
