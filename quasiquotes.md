@@ -4,13 +4,20 @@ layout: default
 
 # Quasi-quotes guide
 
+## Prerequisties
+
+All examples in this guide are run in the repl with one extra import:
+
+    import scala.reflect.runtime.universe._
+
 ## Intro
 ## Cardinality
+## Interpolators: q, tq, cq, pq, fq
 ## Lifting and Unlifting
 ## Referential transparency
 ## Syntax summary
 
-### Abbreviations
+### Abbreviation
 
 * `tname: TermName`
 * `tpname: TypeName`
@@ -32,35 +39,35 @@ layout: default
 
 ### Expressions
 
- Tree             | Quasi-quote                                                 | Type
-------------------|-------------------------------------------------------------|-------------------------
- Empty            | `q""`                                                       | EmptyTree
- Identifier       | `q"$tname"` or `q"Name"`                                    | Ident
- Constant         | `q"$value"`                                                 | Literal
- This             | `q"this"`                                                   | This
- Application      | `q"$expr(...$argss)"`                                       | Apply
- Type Application | `q"$expr[..$targs]"`                                        | TypeApply
- Selection        | `q"$expr.$tname"`                                           | Select
- Assign           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
- Update           | `q"$expr(..$exprs) = $expr"`                                | Tree
- Return           | `q"return $expr"`                                           | Return
- Throw            | `q"throw $expr"`                                            | Throw
- Ascription       | `q"$expr: $tpt"`                                            | Typed 
- Tuple            | `q"(..$exprs)"`                                             | Tree
- Function         | `q"(..$args) => $expr"`                                     | Function
- Block            | `q"{ ..$stats }"`                                           | Block
- If               | `q"if ($expr) $expr else $expr"`                            | If
- Pattern Match    | `q"$expr match { case ..$cases }"`                          | Match
- Try              | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
- While Loop       | `q"while ($expr) $expr"`                                    | LabelDef 
- Do-While Loop    | `q"do $expr while ($expr)"`                                 | LabelDef
- For Loop         | `q"for (..$enums) $expr"`                                   | Tree
- For-Yield Loop   | `q"for (..$enums) yield $expr"`                             | Tree
- New              | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
+                             | Quasi-quote                                                 | Type
+-----------------------------|-------------------------------------------------------------|-------------------------
+ [Empty](#emptyexpr)         | `q""`                                                       | EmptyTree
+ [Identifier](#ident)        | `q"$tname"` or `q"Name"`                                    | Ident
+ [Constant](#const)          | `q"$value"`                                                 | Literal
+ [This](#this)               | `q"this"`                                                   | This
+ [Application](#app)         | `q"$expr(...$argss)"`                                       | Apply
+ [Type Application] (#tapp)  | `q"$expr[..$targs]"`                                        | TypeApply
+ [Selection](#select)        | `q"$expr.$tname"`                                           | Select
+ [Assign](#assign)           | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
+ [Update](#update)           | `q"$expr(..$exprs) = $expr"`                                | Tree
+ [Return](#ret)              | `q"return $expr"`                                           | Return
+ [Throw](#throw)             | `q"throw $expr"`                                            | Throw
+ [Ascription](#ascr)         | `q"$expr: $tpt"`                                            | Typed 
+ [Tuple](#tupexpr)           | `q"(..$exprs)"`                                             | Tree
+ [Function](#funexpr)        | `q"(..$args) => $expr"`                                     | Function
+ [Block](#block)             | `q"{ ..$stats }"`                                           | Block
+ [If](#if)                   | `q"if ($expr) $expr else $expr"`                            | If
+ [Pattern Match](#match)     | `q"$expr match { case ..$cases }"`                          | Match
+ [Try](#try)                 | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
+ [While Loop](#while)        | `q"while ($expr) $expr"`                                    | LabelDef 
+ [Do-While Loop](#dowhile)   | `q"do $expr while ($expr)"`                                 | LabelDef
+ [For Loop](#for)            | `q"for (..$enums) $expr"`                                   | Tree
+ [For-Yield Loop](#foryield) | `q"for (..$enums) yield $expr"`                             | Tree
+ [New](#new)                 | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
 
 ### Types
 
- Tree             | Quasi-quote                           | Type
+                  | Quasi-quote                           | Type
 ------------------|---------------------------------------|---------------------
  Empty Type       | `tq""`                                | TypeTree
  Identifier       | `tq"$tpname"` or `tq"Name"`           | Ident
@@ -75,17 +82,17 @@ layout: default
 
 ### Patterns
  
- Tree             | Quasi-quote           | Type                    
+                  | Quasi-quote           | Type                    
 ------------------|-----------------------|-------------------
- Wildcard         | `pq"_"`               | Ident
+ Wildcard Pattern | `pq"_"`               | Ident
  Binding          | `pq"$tname @ $pat"`   | Bind
  Extractor Call   | `pq"$ref(..$pats)"`   | Apply, UnApply   
- Tuple            | `pq"(..$pats)"`       | Apply, UnApply
+ Tuple Pattern    | `pq"(..$pats)"`       | Apply, UnApply
  Type Pattern     | `pq"$tname: $tpt"`    | Typed             
  
 ### Definitions
 
- Tree           | Quasi-quote                                                                                                        | Type 
+                | Quasi-quote                                                                                                        | Type 
 ----------------|--------------------------------------------------------------------------------------------------------------------|-----------
  Def            | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  Val            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
@@ -103,6 +110,171 @@ layout: default
 ## Syntax Details 
 
 ### Expressions
+
+#### Empty <a name="emptyexpr"> </a>
+
+Empty expression (`q""`) is used to indicate that some part of the syntactic expressions is not provided by the user:
+
+1. Vals, Vars, Defs definitions without right-hand side have it set to `q""`.
+2. Type definition without right-hand side has it set to `TypeBounds(q"", q"")`.
+3. Try without finally clause have it set to `q""`.
+4. Case clause without guard has it set to `q""`.
+
+#### Identifier <a name="ident"> </a>
+
+#### Constant <a name="const"> </a>
+
+#### This <a name="this"> </a>
+
+#### Application <a name="app"> </a>
+
+#### Type Application <a name="tapp"> </a>
+
+#### Selection <a name="select"> </a>
+
+#### Assign <a name="assign"> </a>
+
+#### Update <a name="update"> </a>
+
+#### Return <a name="return"> </a>
+
+#### Throw <a name="throw"> </a>
+
+#### Ascription <a name="ascr"> </a>
+
+#### Tuple <a name="tupexpr"> </a>
+
+Tuples are heteregeneous data structures with built-in user-friendly syntax. The syntax itself is just a sugar that maps onto `scala.TupleN` calls:
+
+    scala> val tup = q"(a, b)"
+    tup: reflect.runtime.universe.Tree = scala.Tuple2(a, b)
+
+At the moment tuples are only supported up to 22 arity but this is just an implementation restriction that might be lifted in the future. To find out if given arity is supported use:
+
+    scala> val `tuple 10 supported?` = definitions.TupleClass(10) != NoSymbol
+    tuple 10 supported?: Boolean = true
+
+    scala> val `tuple 23 supported?` = definitions.TupleClass(23) != NoSymbol
+    tuple 23 supported?: Boolean = false
+
+Despited the fact that `Tuple1` class exists there is no built-in syntax for it. Single parens around expression do not change its meaning:
+ 
+    scala> val inparens = q"(a)"
+    inparens: reflect.runtime.universe.Ident = a
+
+It is also common to treat `Unit` as nullary tuple:
+   
+    scala> val elems = List.empty[Tree]
+    scala> val nullary = q"(..$elems)"
+    nullary: reflect.runtime.universe.Tree = ()
+
+Quasi-quotes also support deconstruction of tuples of arbitrary arity:
+
+    scala> val q"(..$elems)" = q"(a, b)"
+    elems: List[reflect.runtime.universe.Tree] = List(a, b)   
+
+This pattern also matches expressions as single-element tuples:
+
+    scala> val q"(..$elems)" = q"(a)"
+    elems: List[reflect.runtime.universe.Tree] = List(a)
+
+And unit as nullary tuple:
+
+    scala> val q"(..$elems)" = q"()"
+    elems: List[reflect.runtime.universe.Tree] = List()
+
+#### Function <a name="funexpr"> </a>
+
+#### Block <a name="block"> </a>
+
+Blocks are a fundamental primitive to express sequence of actions or bindings in scala program. `q""` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
+
+    scala> val t = q"a; b; c" 
+    t: reflect.runtime.universe.Tree =
+    {
+      a;
+      b;
+      c
+    } 
+
+The only difference between `q"{...}"` and `q"..."` is handling of case when just a single element is present. `q"..."` always returns an element itself while a block still remains a block if a single element is not expression:
+
+    scala> val t = q"val x = 2"
+    t: reflect.runtime.universe.ValDef = val x = 2
+
+    scala> val t = q"{ val x = 2 }"
+    t: reflect.runtime.universe.Tree =
+    {
+      val x = 2;
+      ()
+    }
+
+Blocks can also be flattened into another blocks with `..$`:
+
+    scala> val ab = q"a; b"
+    ab: reflect.runtime.universe.Tree =
+    {
+      a;
+      b
+    }
+
+    scala> q"..$ab; c"
+    res0: reflect.runtime.universe.Tree =
+    {
+      a;
+      b;
+      c
+    }
+
+The same syntax can be used to deconstruct blocks:
+
+    scala> val q"..$stats" = q"a; b; c"
+    stats: List[reflect.runtime.universe.Tree] = List(a, b, c)
+
+Deconstruction always returns just user-defined contents of a block:
+
+    scala> val q"..$stats" = q"{ val x = 2 }"
+    stats: List[reflect.runtime.universe.Tree] = List(val x = 2)
+
+Due to automatic flattening of single-element blocks with expressions, expressions themselves are considered to be single-element blocks:
+
+    scala> val q"..$stats" = q"foo"
+    stats: List[reflect.runtime.universe.Tree] = List(foo)
+
+Empty tree is considered to be a zero-element block:
+
+    scala> val q"..$stats" = q""
+    stats: List[reflect.runtime.universe.Tree] = List()
+
+#### If <a name="if"> </a>
+
+There are two variaties of if expressions: those with else clause and without it:
+
+    scala> val q"if ($cond) $thenp else $elsep" = q"if (true) a else b"
+    cond: reflect.runtime.universe.Tree = true
+    thenp: reflect.runtime.universe.Tree = a
+    elsep: reflect.runtime.universe.Tree = b
+
+    scala> val q"if ($cond) $thenp else $elsep" = q"if (true) a"
+    cond: reflect.runtime.universe.Tree = true
+    thenp: reflect.runtime.universe.Tree = a
+    elsep: reflect.runtime.universe.Tree = ()
+
+No-else clause is equivalent to else clause that contains a unit literal. 
+
+#### Pattern Match <a name="match"> </a>
+
+#### Try <a name="try"> </a>
+
+#### While Loop <a name="while"> </a>
+
+#### Do-While Loop <a name="dowhile"> </a>
+
+#### For Loop <a name="for"> </a>
+
+#### For-Yield Loop <a name="foryield"> </a>
+
+#### New <a name="new"> </a>
 
 ### Types
 
