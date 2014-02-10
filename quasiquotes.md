@@ -115,8 +115,8 @@ All examples in this guide are run in the repl with one extra import:
 
 Empty expression (`q""`) is used to indicate that some part of the syntactic expressions is not provided by the user:
 
-1. Vals, Vars, Defs definitions without right-hand side have it set to `q""`.
-2. Type definition without right-hand side has it set to `TypeBounds(q"", q"")`.
+1. Vals, Vars and Defs without right-hand side have it set to `q""`.
+2. Type definition without bounds has it set to q"".
 3. Try without finally clause have it set to `q""`.
 4. Case clause without guard has it set to `q""`.
 
