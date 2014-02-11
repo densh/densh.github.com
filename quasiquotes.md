@@ -125,6 +125,7 @@ All examples in this guide are run in the repl with one extra import:
  [Import](#import-definition)          | `q"import $ref.{..$sels}"`                                                                                         | Import
 
 ### Auxiliary <a name="aux-summary"> </a>
+
                                      | Quasi-quote                 | Type
 -------------------------------------|-----------------------------|--------
  [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
