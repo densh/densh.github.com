@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: page 
 ---
 
 # Quasi-quote guide (WIP)
@@ -30,7 +30,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Syntax summary
 
-### Abbreviation
+### Abbreviations
 
 * `tname: TermName`
 * `tpname: TypeName`
