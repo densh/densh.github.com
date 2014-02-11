@@ -55,24 +55,25 @@ All examples in this guide are run in the repl with one extra import:
                                         | Quasi-quote                                                 | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
  [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
- [Identifier](#ident)                   | `q"$tname"` or `q"Name"`                                    | Ident
+ [Identifier](#term-ident)              | `q"$tname"` or `q"name"`                                    | Ident
  [Constant](#constant)                  | `q"$value"`                                                 | Literal
- [This](#this-super)                    | `q"$tpname.this"`                                           | This
- [Super](#this-super)                   | `q"$tpname.super[$tpname].$tname"`                          | Tree
  [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
  [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
  [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
+ [This](#this-super)                    | `q"$tpname.this"`                                           | This
+ [Super](#this-super)                   | `q"$tpname.super[$tpname].$tname"`                          | Tree
  [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
  [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
  [Return](#return)                      | `q"return $expr"`                                           | Return
  [Throw](#throw)                        | `q"throw $expr"`                                            | Throw
  [Ascription](#ascription)              | `q"$expr: $tpt"`                                            | Typed 
  [Tuple](#tuple-expr)                   | `q"(..$exprs)"`                                             | Tree
- [Function](#function-expr)             | `q"(..$args) => $expr"`                                     | Function
  [Block](#block)                        | `q"{ ..$stats }"`                                           | Block
  [If](#if)                              | `q"if ($expr) $expr else $expr"`                            | If
  [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                          | Match
  [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
+ [Function](#function-expr)             | `q"(..$args) => $expr"`                                     | Function
+ [Partial Function](#partial-function)  | `q"{ case ..$cases }"`                                      | Match
  [While Loop](#while)                   | `q"while ($expr) $expr"`                                    | LabelDef 
  [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                 | LabelDef
  [For Loop](#for)                       | `q"for (..$enums) $expr"`                                   | Tree
@@ -81,46 +82,47 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Types <a name="types-summary"> </a>
 
-                  | Quasi-quote                           | Type
-------------------|---------------------------------------|---------------------
- Empty Type       | `tq""`                                | TypeTree
- Identifier       | `tq"$tpname"` or `tq"Name"`           | Ident
- Applied Type     | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
- Tuple Type       | `tq"(..$tpts)"`                       | Tree
- Function Type    | `tq"(..$tpts) => $tpt"`               | Tree
- Existential Type | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
- Type Selection   | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
- Dependent Type   | `tq"$ref.$tpname"`                    | Select
- Refined Type     | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
- Singleton Type   | `tq"$ref.type"`                       | SingletonType
- Super Type       | `tq"$tpname.super[$tpname].$tpname"`  | Tree
+                                       | Quasi-quote                           | Type
+---------------------------------------|---------------------------------------|---------------------
+ [Empty Type](#empty-type)             | `tq""`                                | TypeTree
+ [Type Identifier](#type-ident)        | `tq"$tpname"` or `tq"Name"`           | Ident
+ [Applied Type](#applied-type)         | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
+ [Tuple Type](#tuple-type)             | `tq"(..$tpts)"`                       | Tree
+ [Function Type](#function-type)       | `tq"(..$tpts) => $tpt"`               | Tree
+ [Existential Type](#existential-type) | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
+ [Type Selection](#type-selection)     | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
+ [Dependent Type](#dependent-type)     | `tq"$ref.$tpname"`                    | Select
+ [Refined Type](#refined-type)         | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
+ [Singleton Type](#singleton-type)     | `tq"$ref.type"`                       | SingletonType
+ [Super Type](#super-type)             | `tq"$tpname.super[$tpname].$tpname"`  | Tree
 
 ### Patterns <a name="pats-summary"> </a>
  
-                  | Quasi-quote           | Type                    
-------------------|-----------------------|-------------------
- Wildcard Pattern | `pq"_"`               | Ident
- Binding          | `pq"$tname @ $pat"`   | Bind
- Extractor Call   | `pq"$ref(..$pats)"`   | Apply, UnApply   
- Tuple Pattern    | `pq"(..$pats)"`       | Apply, UnApply
- Type Pattern     | `pq"$tname: $tpt"`    | Typed             
+                                             | Quasi-quote             | Type                    
+---------------------------------------------|-------------------------|-------------------
+ [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                 | Ident
+ [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`     | Bind
+ [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`     | Apply, UnApply   
+ [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`         | Apply, UnApply
+ [Type Pattern](#type-pattern)               | `pq"$tname: $tpt"`      | Typed  
+ [Alternative Pattern](#alternative-pattern) | `pq"($pat FIXME $pat)"` | Alternative       
  
 ### Definitions <a name="defns-summary"> </a>
 
-                | Quasi-quote                                                                                                        | Type 
-----------------|--------------------------------------------------------------------------------------------------------------------|-----------
- Def            | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
- Val            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- Var            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- Val Pattern    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
- Var Pattern    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
- Type           | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
- Class          | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
- Trait          | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
- Object         | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
- Package        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
- Package Object | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
- Import         | `q"import $ref.{..$sels}"`                                                                                         | Import
+                                       | Quasi-quote                                                                                                        | Type 
+---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
+ [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
+ [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Var](#val-var-definition)            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Val Pattern](#val-var-definition)    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
+ [Var Pattern](#val-var-definition)    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
+ [Type](#type-definition)              | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
+ [Class](#class-definition)            | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
+ [Trait](#trait-definition)            | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
+ [Object](#object-definition)          | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
+ [Package](#package-definition)        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
+ [Package Object](#package-definition) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
+ [Import](#import-definition)          | `q"import $ref.{..$sels}"`                                                                                         | Import
 
 ### Auxiliary <a name="aux-summary"> </a>
                                      | Quasi-quote                 | Type
@@ -143,9 +145,25 @@ All examples in this guide are run in the repl with one extra import:
 3. Try expressions without finally clause have it set to `q""`.
 4. Case clauses without guards have them set to `q""`.
 
-#### Identifier <a name="ident"> </a>
+Default toString formats `q""` as `<empty>`.
+
+#### Identifier <a name="term-ident"> </a>
+
+You can also esily create a fresh identifiers with the help of `q"_"`:
+
+    scala> val freshId = q"_"
+    freshId: reflect.runtime.universe.Ident = x$1
+
+    scala> val freshId = q"_"
+    freshId: reflect.runtime.universe.Ident = x$2
 
 #### Constant <a name="constant"> </a>
+
+#### Application <a name="application"> </a>
+
+#### Type Application <a name="type-application"> </a>
+
+#### Selection <a name="selection"> </a>
 
 #### This and Super <a name="this-super"> </a>
 
@@ -177,12 +195,6 @@ Similarly for super we have:
     name: reflect.runtime.universe.TypeName = other
     qual: reflect.runtime.universe.TypeName = T
     field: reflect.runtime.universe.Name = foo
-
-#### Application <a name="application"> </a>
-
-#### Type Application <a name="type-application"> </a>
-
-#### Selection <a name="selection"> </a>
 
 #### Assign and Update <a name="assign-update"> </a>
 
@@ -248,8 +260,6 @@ And unit as nullary tuple:
 
     scala> val q"(..$elems)" = q"()"
     elems: List[reflect.runtime.universe.Tree] = List()
-
-#### Function <a name="function-expr"> </a>
 
 #### Block <a name="block"> </a>
 
@@ -372,6 +382,12 @@ Try expression is used to handle possible error conditions and ensure consistent
 
 Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
 
+#### Function <a name="function-expr"> </a>
+
+Anonymous functions 
+
+#### Partial Function <a name="partial-function"> </a>
+
 #### While and Do-While Loops <a name="while"> </a>
 
 #### For and For-Yield Loops <a name="for"> </a>
@@ -380,6 +396,56 @@ Similarly to [pattern matching](#match) cases can be further deconstructed with 
 
 ### Types
 
+#### Empty Type <a name="empty-type"> </a>
+
+#### Type Identifier <a name="type-ident"> </a>
+
+#### Applied Type <a name="applied-type"> </a>
+
+#### Tuple Type <a name="tuple-type"> </a>
+
+#### Function Type <a name="function-type"> </a>
+
+#### Existential Type <a name="existential-type"> </a>
+
+#### Type Selection <a name="type-selection"> </a>
+
+#### Dependent Type <a name="dependent-type"> </a>
+
+#### Refined Type <a name="refined-type"> </a>
+
+#### Singleton Type <a name="singleton-type"> </a>
+
+#### Super Type <a name="super-type"> </a>
+
 ### Patterns
 
+#### Wildcard Pattern <a name="wildcard-pattern"> </a>
+
+#### Binding Pattern <a name="binding-pattern"> </a>
+
+#### Extractor Pattern <a name="extractor-pattern"> </a>
+
+#### Tuple Pattern <a name="tuple-pattern"> </a>
+
+#### Type Pattern <a name="type-pattern"> </a>
+
+#### Alternative Pattern <a name="alternative-pattern"> </a>
+
 ### Definitions
+
+#### Def Definitino <a name="def-definition"> </a>
+
+#### Val and Var Definitions <a name="val-var-definition"> </a>
+
+#### Type Definition <a name="type-definition"> </a>
+
+#### Class Definition <a name="class-definition"> </a>
+
+#### Trait Definition <a name="trait-definition"> </a>
+
+#### Object Definition <a name="object-definition"> </a>
+
+#### Package and Package Object Definitions<a name="package-definition"> </a>
+
+#### Import Definition <a name="import-definition"> </a>
