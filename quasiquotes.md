@@ -98,14 +98,14 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Patterns <a name="pats-summary"> </a>
  
-                                             | Quasi-quote             | Type                    
----------------------------------------------|-------------------------|-------------------
- [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                 | Ident
- [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`     | Bind
- [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`     | Apply, UnApply   
- [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`         | Apply, UnApply
- [Type Pattern](#type-pattern)               | `pq"$tname: $tpt"`      | Typed  
- [Alternative Pattern](#alternative-pattern) | `pq"($pat FIXME $pat)"` | Alternative       
+                                             | Quasi-quote            | Type                    
+---------------------------------------------|------------------------|-------------------
+ [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
+ [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`    | Bind
+ [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
+ [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
+ [Type Pattern](#type-pattern)               | `pq"$tname: $tpt"`     | Typed  
+ [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
  
 ### Definitions <a name="defns-summary"> </a>
 
@@ -434,7 +434,7 @@ Anonymous functions
 
 ### Definitions
 
-#### Def Definitino <a name="def-definition"> </a>
+#### Def Definition <a name="def-definition"> </a>
 
 #### Val and Var Definitions <a name="val-var-definition"> </a>
 
