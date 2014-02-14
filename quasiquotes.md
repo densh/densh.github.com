@@ -2,7 +2,7 @@
 layout: page 
 ---
 
-# Quasi-quote guide (WIP)
+# Quasiquote guide (WIP)
 
 ## Prerequisties <a name="prereq"> </a>
 
@@ -10,9 +10,18 @@ All examples in this guide are run in the repl with one extra import:
 
     import scala.reflect.runtime.universe._
 
+Following terminology is used to talk about quasiquotes:
+
+* Quasiquote (not quasi-quote) can refer to either quasiquote library or any usage of one it's interpolators
+* Tree or AST (Abstract Syntax Tree)
+* Unquote
+* Splicing
+* Lifting and Liftable
+* Unlifting and Unliftable
+
 ## Intro <a name="intro"> </a> 
 
-## Cardinality <a name="cardinality"> </a>
+## Splicing <a name="cardinality"> </a>
 
 ## Interpolators <a name="interpolators"> </a>
 
