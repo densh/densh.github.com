@@ -379,8 +379,6 @@ Similarly to [pattern matching](#match) cases can be further deconstructed with 
 
 #### Function <a name="function-expr"> </a>
 
-Anonymous functions 
-
 #### Partial Function <a name="partial-function"> </a>
 
 #### While and Do-While Loops <a name="while"> </a>
