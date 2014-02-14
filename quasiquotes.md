@@ -14,6 +14,8 @@ All examples in this guide are run in the repl with one extra import:
 
 * **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
 * **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
+* **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
+* **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
 * **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
 * **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
 * **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
@@ -64,7 +66,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Expressions <a name="exprs-summary"> </a>
 
-                                        | Quasi-quote                                                 | Type
+                                        | Quasiquote                                                 | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
  [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
  [Identifier](#term-ident)              | `q"$tname"` or `q"name"`                                    | Ident
@@ -94,7 +96,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Types <a name="types-summary"> </a>
 
-                                       | Quasi-quote                           | Type
+                                       | Quasiquote                           | Type
 ---------------------------------------|---------------------------------------|---------------------
  [Empty Type](#empty-type)             | `tq""`                                | TypeTree
  [Type Identifier](#type-ident)        | `tq"$tpname"` or `tq"Name"`           | Ident
@@ -110,7 +112,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Patterns <a name="pats-summary"> </a>
  
-                                             | Quasi-quote            | Type                    
+                                             | Quasiquote            | Type                    
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
  [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`    | Bind
@@ -121,7 +123,7 @@ All examples in this guide are run in the repl with one extra import:
  
 ### Definitions <a name="defns-summary"> </a>
 
-                                       | Quasi-quote                                                                                                        | Type 
+                                       | Quasiquote                                                                                                        | Type 
 ---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
  [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
@@ -138,7 +140,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ### Auxiliary <a name="aux-summary"> </a>
 
-                                     | Quasi-quote                 | Type
+                                     | Quasiquote                 | Type
 -------------------------------------|-----------------------------|--------
  [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
  [Generator Enumerator](#for)        | `fq"$pat <- $expr"`         | Tree
@@ -205,7 +207,7 @@ Similarly for super we have:
 
 #### Return <a name="return"> </a>
 
-Return expressions is used to perform early return from the function. 
+Return expressions is used to perform early return from a function. 
 
     scala> val ret = q"return 2 + 2"
     ret: reflect.runtime.universe.Return = return 2.$plus(2)
@@ -260,7 +262,7 @@ It is also common to treat `Unit` as nullary tuple:
     scala> val nullary = q"(..$elems)"
     nullary: reflect.runtime.universe.Tree = ()
 
-Quasi-quotes also support deconstruction of tuples of arbitrary arity:
+Quasiquotes also support deconstruction of tuples of arbitrary arity:
 
     scala> val q"(..$elems)" = q"(a, b)"
     elems: List[reflect.runtime.universe.Tree] = List(a, b)   
