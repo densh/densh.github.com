@@ -215,6 +215,15 @@ Throw expression is used to throw a throwable:
 
 #### Ascription <a name="ascription"> </a>
 
+Ascriptions lets users to annotation type of intermidiate expresion:
+
+    scala> val ascribed = q"(1 + 1): Int"
+    ascribed: reflect.runtime.universe.Typed = (1.$plus(1): Int)
+
+    scala> val q"$expr: $tpt" = ascribed
+    expr: reflect.runtime.universe.Tree = 1.$plus(1)
+    tpt: reflect.runtime.universe.Tree = Int
+
 #### Tuple <a name="tuple-expr"> </a>
 
 Tuples are heteregeneous data structures with built-in user-friendly syntax. The syntax itself is just a sugar that maps onto `scala.TupleN` calls:
@@ -356,6 +365,15 @@ Combination of the two forms allows to construct and deconstruct arbitrary patte
     pat2: reflect.runtime.universe.Tree = _
     body2: reflect.runtime.universe.Tree = scala.Symbol("notfoo")
 
+Case clause without body is equivalent to one holding unit literal:
+
+    scala> val cq"$pat if $expr1 => $expr2" = cq"_ =>"
+    pat: reflect.runtime.universe.Tree = _
+    expr1: reflect.runtime.universe.Tree = <empty>
+    expr2: reflect.runtime.universe.Tree = ()
+
+No-guard is represented with the help of [empty expression](#empty-expr).
+
 #### Try <a name="try"> </a>
 
 Try expression is used to handle possible error conditions and ensure consistent state via finally. Both error handling cases and finally clause are optional.
@@ -380,6 +398,44 @@ Try expression is used to handle possible error conditions and ensure consistent
 Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
 
 #### Function <a name="function-expr"> </a>
+
+There are three ways to create anonymous function:
+
+    scala> val f1 = q"_ + 1"
+    anon1: reflect.runtime.universe.Function = ((x$4) => x$4.$plus(1))
+
+    scala> val f2 = q"(a => a + 1)"
+    anon2: reflect.runtime.universe.Function = ((a) => a.$plus(1))
+
+    scala> val f3 = q"(a: Int) => a + 1"
+    anon3: reflect.runtime.universe.Function = ((a: Int) => a.$plus(1))
+
+First one uses placeholder syntax. Second one names function parameter but still relies
+on type inference to infer its type. Last one explicitly defines function parameter. Due
+to implementation restriction second notation can only be used in parenthesis or inside other
+expression. If you leave them out you have to specify parameter types.
+
+All of the given forms are represented in the same way and could be uniformly matched upon:
+
+    scala> List(f1, f2, f3).foreach { 
+             case q"(..$args) => $expr" => 
+               println(s"args = $args, expr = $expr") 
+           }
+    args = List(<synthetic> val x$5 = _), expr = x$5.$plus(1)
+    args = List(val a = _), expr = a.$plus(1)
+    args = List(val a: Int = _), expr = a.$plus(1)
+
+Parameters are represented as Vals. If you want to programmatically create val that should have 
+its type inferred you need to use [empty type](#empty-type):
+
+    scala> val tpt = tq""
+    tpt: reflect.runtime.universe.TypeTree = <type ?>
+
+    scala> val param = q"val x: $tpt"
+    param: reflect.runtime.universe.ValDef = val x
+
+    scala> q"($param => x)"
+    res30: reflect.runtime.universe.Function = ((x) => x)
 
 #### Partial Function <a name="partial-function"> </a>
 
