@@ -10,18 +10,19 @@ All examples in this guide are run in the repl with one extra import:
 
     import scala.reflect.runtime.universe._
 
-Following terminology is used to talk about quasiquotes:
+## Terminology <a name="terminology"> </a>
 
-* Quasiquote (not quasi-quote) can refer to either quasiquote library or any usage of one it's interpolators
-* Tree or AST (Abstract Syntax Tree)
-* Unquote
-* Splicing
-* Lifting and Liftable
-* Unlifting and Unliftable
+* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators)
+* **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
+* **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
+* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
+* **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
+* [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into Trees with the help of Liftable typeclass.
+* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
 
 ## Intro <a name="intro"> </a> 
 
-## Splicing <a name="cardinality"> </a>
+## Splicing and cardinality <a name="splicing"> </a>
 
 ## Interpolators <a name="interpolators"> </a>
 
