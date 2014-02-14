@@ -38,6 +38,46 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Lifting <a name="lifting"> </a>
 
+### Intro <a name="lifting-intro"> </a>
+
+Lifting is typeclass-based approach to define representation of custom data types as Trees.
+To define your own representation just provide an implicit instance of `Liftable` for it:
+
+    package points
+
+    import scala.reflect.runtime.universe._ 
+
+    case class Point(x: Int, y: Int)
+    object Point {
+      implicit val lift = Liftable[Point] { p => 
+        q"_root_.points.Point(${p.x}, ${p.y})" 
+      }
+    }
+
+This way whenever a value of Point type is unquoted in runtime quasiquote it will be automatically transformed
+into a case class constructor call. In this example there a few important points to take into account:
+
+1. Here we only defined `Liftable` for runtime reflection. It won't be found if you try to
+   use it from a macro due to the fact that each universe contains its own `Liftable` which is not
+   compatible with the others. This problem is caused by path-dependant nature of current reflection
+   api. (see [sharing liftable implementation between universes](#liftable-sharing))
+
+2. Due to lack of [referential transparency](#referential-transperancy), reference to point companion
+   has to be fully qualified to ensure correctness in of this tree in every possible context. Another
+   way to workaround reference issue is to use symbols to refer to things:
+
+       val PointSym = symbolOf[Point].companionModule
+       implicit val lift = Liftable[Point] { p =>
+         q"$PointSym(${p.x}, ${p.y})"
+       }
+
+3. It's possible to unquote `x` and `y` fields because there is standard instance of `Liftable[Int]`
+   available by default. (see [standard liftables](#standard-liftables))
+
+### Standard Liftables <a name="standard-liftables"> </a>
+
+### Sharing Liftable implementations between universes <a name="sharing-liftable"> </a>
+
 ## Unlifting <a name="unlifting"> </a>
 
 ## Referential transparency <a name="referential-transperancy"> </a>
@@ -69,11 +109,11 @@ All examples in this guide are run in the repl with one extra import:
                                         | Quasiquote                                                 | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
  [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
+ [Literal](#literal)                    | `q"$value"`                                                 | Literal
  [Identifier](#term-ident)              | `q"$tname"` or `q"name"`                                    | Ident
- [Constant](#constant)                  | `q"$value"`                                                 | Literal
+ [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
  [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
  [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
- [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
  [This](#this-super)                    | `q"$tpname.this"`                                           | This
  [Super](#this-super)                   | `q"$tpname.super[$tpname].$tname"`                          | Tree
  [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
@@ -159,18 +199,57 @@ All examples in this guide are run in the repl with one extra import:
 2. Type definitions without bounds have them set to `q""`.
 3. Try expressions without finally clause have it set to `q""`.
 4. Case clauses without guards have them set to `q""`.
+5. Encoding of partial funtions as match expressions with `q""` scrutinee.
 
 Default toString formats `q""` as `<empty>`.
 
+#### Literal <a name="literal"> </a>
+
+Scala has a number of default built-in literals:
+    
+    q"1", q"1L"         // integer literals
+    q"1.0", q"1.0D"     // float literals
+    q"true", q"false"   // boolean literals
+    q"'c'"              // char literal
+    q""" "string" """   // string literal
+    q"'symbol"          // symbol literal
+    q"null"             // null literal
+    q"()"               // unit literal
+
+All of those values have Literal type except symbols which have different representation:
+    
+    scala> q"'symbol"
+    res12: reflect.runtime.universe.Tree = scala.Symbol("symbol")
+
+Thanks to [lifting](#lifting) you can also easily create literal trees directly from values of corresponding types:
+
+    scala> val x = 1
+    scala> q"$x"
+    res13: reflect.runtime.universe.Tree = 1
+
+This would work the same way for instances of `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean`, `String`, `Unit` and `scala.Symbol` types.
+Lifting of null values and `Null` type isn't supported, use `q"null"` if you really mean to create null literal:
+
+    scala> val x = null
+    scala> q"$x"
+    <console>:31: error: Can't splice Null, bottom type values often indicate programmer mistake
+                  q"$x"
+                     ^
+
+During deconstruction you can use [unlifting](#unlifting) to extract values out of Literal trees:
+
+    scala> val q"${x: Int}" = q"1"
+    x: Int = 1
+
+Similarly it would work with all the literal types except `Null`.
+
 #### Identifier <a name="term-ident"> </a>
 
-#### Constant <a name="constant"> </a>
+#### Selection <a name="selection"> </a>
 
 #### Application <a name="application"> </a>
 
 #### Type Application <a name="type-application"> </a>
-
-#### Selection <a name="selection"> </a>
 
 #### This and Super <a name="this-super"> </a>
 
@@ -205,6 +284,24 @@ Similarly for super we have:
 
 #### Assign and Update <a name="assign-update"> </a>
 
+Assign and update are two related ways to explictly mutate a variable or collection:
+
+    scala> val assign = q"x = 2"
+    assign: reflect.runtime.universe.Tree = x = 2
+
+    scala> val update = q"array(0) = 1"
+    update: reflect.runtime.universe.Tree = array.update(0, 1)
+
+As you can see update syntax is just a syntactic sugar that gets represented as update method call on given object.
+
+Nevertheless quasiquotes let you deconstruct both of them uniformly according to their user-facing syntax:
+
+    scala> List(assign, update).foreach { case q"$left = $right" => println(s"left = $left, right = $right") }
+    left = x, right = 2
+    left = array(0), right = 1
+
+Where `array(0)` has the same AST as function application. 
+
 #### Return <a name="return"> </a>
 
 Return expressions is used to perform early return from a function. 
@@ -227,7 +324,7 @@ Throw expression is used to throw a throwable:
 
 #### Ascription <a name="ascription"> </a>
 
-Ascriptions lets users to annotation type of intermidiate expresion:
+Ascriptions lets users to annotate type of intermidiate expression:
 
     scala> val ascribed = q"(1 + 1): Int"
     ascribed: reflect.runtime.universe.Typed = (1.$plus(1): Int)
@@ -462,6 +559,24 @@ It's recommended to use underscore pattern in place of modifiers even if you don
 with them as parameters may contains additional flags which might cause match errors.
 
 #### Partial Function <a name="partial-function"> </a>
+
+Partial functions are a neat syntax that lets you express functions with
+limited domain with the help of pattern matching:
+
+    scala> val pf = q"{ case i: Int if i > 0 => i * i }"
+    pf: reflect.runtime.universe.Match =
+    <empty> match {
+      case (i @ (_: Int)) if i.$greater(0) => i.$times(i)
+    }
+
+Under the hood they are represented as match trees with [empty](#empty-expr) scrutinee.
+
+    scala> val q"{ case ..$cases }" = pf
+    cases: List[reflect.runtime.universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
+
+    scala> val q"$expr match { case ..$cases }" = pf
+    expr: reflect.runtime.universe.Tree = <empty>
+    cases: List[reflect.runtime.universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
 
 #### While and Do-While Loops <a name="while"> </a>
 
