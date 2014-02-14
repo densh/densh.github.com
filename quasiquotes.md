@@ -4,17 +4,17 @@ layout: page
 
 # Quasi-quote guide (WIP)
 
-## Prerequisties
+## Prerequisties <a name="prereq"> </a>
 
 All examples in this guide are run in the repl with one extra import:
 
     import scala.reflect.runtime.universe._
 
-## Intro
+## Intro <a name="intro"> </a> 
 
-## Cardinality
+## Cardinality <a name="cardinality"> </a>
 
-## Interpolators
+## Interpolators <a name="interpolators"> </a>
 
     | Used for 
 ----|----------------------------------------------------------------
@@ -24,13 +24,15 @@ All examples in this guide are run in the repl with one extra import:
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
-## Lifting and Unlifting
+## Lifting <a name="lifting"> </a>
 
-## Referential transparency
+## Unlifting <a name="unlifting"> </a>
 
-## Syntax summary
+## Referential transparency <a name="referential-transperancy"> </a>
 
-### Abbreviations
+## Syntax summary <a name="syntax-summary"> </a>
+
+### Abbreviations <a name="abbrev"> </a>
 
 * `tname: TermName`
 * `tpname: TypeName`
