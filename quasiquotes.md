@@ -150,14 +150,6 @@ Default toString formats `q""` as `<empty>`.
 
 #### Identifier <a name="term-ident"> </a>
 
-You can also esily create a fresh identifiers with the help of `q"_"`:
-
-    scala> val freshId = q"_"
-    freshId: reflect.runtime.universe.Ident = x$1
-
-    scala> val freshId = q"_"
-    freshId: reflect.runtime.universe.Ident = x$2
-
 #### Constant <a name="constant"> </a>
 
 #### Application <a name="application"> </a>
@@ -371,12 +363,14 @@ Try expression is used to handle possible error conditions and ensure consistent
     b: List[reflect.runtime.universe.CaseDef] = List()
     c: reflect.runtime.universe.Tree = <empty>
 
-    scala> val q"try $a catch { case ..$b } finally $c" = q"try t catch { case _: C => }"
+    scala> val q"try $a catch { case ..$b } finally $c" = 
+               q"try t catch { case _: C => }"
     a: reflect.runtime.universe.Tree = t
     b: List[reflect.runtime.universe.CaseDef] = List(case (_: C) => ())
     c: reflect.runtime.universe.Tree = <empty>
 
-    scala> val q"try $a catch { case ..$b } finally $c" = q"try t finally f"
+    scala> val q"try $a catch { case ..$b } finally $c" = 
+               q"try t finally f"
     a: reflect.runtime.universe.Tree = t
     b: List[reflect.runtime.universe.CaseDef] = List()
     c: reflect.runtime.universe.Tree = f
