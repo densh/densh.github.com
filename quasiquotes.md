@@ -415,17 +415,7 @@ on type inference to infer its type. Last one explicitly defines function parame
 to implementation restriction second notation can only be used in parenthesis or inside other
 expression. If you leave them out you have to specify parameter types.
 
-All of the given forms are represented in the same way and could be uniformly matched upon:
-
-    scala> List(f1, f2, f3).foreach { 
-             case q"(..$args) => $expr" => 
-               println(s"args = $args, expr = $expr") 
-           }
-    args = List(<synthetic> val x$5 = _), expr = x$5.$plus(1)
-    args = List(val a = _), expr = a.$plus(1)
-    args = List(val a: Int = _), expr = a.$plus(1)
-
-Parameters are represented as Vals. If you want to programmatically create val that should have 
+Parameters are represented as [Vals](#val-var-definition). If you want to programmatically create val that should have 
 its type inferred you need to use [empty type](#empty-type):
 
     scala> val tpt = tq""
@@ -437,9 +427,64 @@ its type inferred you need to use [empty type](#empty-type):
     scala> q"($param => x)"
     res30: reflect.runtime.universe.Function = ((x) => x)
 
+All of the given forms are represented in the same way and could be uniformly matched upon:
+
+    scala> List(f1, f2, f3).foreach { 
+             case q"(..$args) => $expr" => 
+               println(s"args = $args, expr = $expr") 
+           }
+    args = List(<synthetic> val x$5 = _), expr = x$5.$plus(1)
+    args = List(val a = _), expr = a.$plus(1)
+    args = List(val a: Int = _), expr = a.$plus(1)
+
+You can also tear arguments further apart:
+
+    scala> val q"(..$args => $_)" = f3
+    args: List[reflect.runtime.universe.ValDef] = List(val a: Int = _)
+
+    scala> val List(q"$_ val $name: $tpt") = args
+    name: reflect.runtime.universe.TermName = a
+    tpt: reflect.runtime.universe.Tree = Int
+
+It's recommended to use underscore pattern in place of modifiers even if you don't plan to work 
+with them as parameters may contains additional flags which might cause match errors.
+
 #### Partial Function <a name="partial-function"> </a>
 
 #### While and Do-While Loops <a name="while"> </a>
+
+While and do-while loops are low-level control structures that used when performance of iteration
+is critical:
+
+    scala> val `while` = q"while(x > 0) x -= 1"
+    while: reflect.runtime.universe.LabelDef =
+    while$6(){
+      if (x.$greater(0))
+        {
+          x.$minus$eq(1);
+          while$6()
+        }
+      else
+        ()
+    }
+
+    scala> val q"while($cond) $body" = `while`
+    cond: reflect.runtime.universe.Tree = x.$greater(0)
+    body: reflect.runtime.universe.Tree = x.$minus$eq(1)
+
+    scala> val `do-while` = q"do x -= 1 while (x > 0)"
+    do-while: reflect.runtime.universe.LabelDef =
+    doWhile$2(){
+      x.$minus$eq(1);
+      if (x.$greater(0))
+        doWhile$2()
+      else
+        ()
+    }
+
+    scala> val q"do $body while($cond)" = `do-while`
+    body: reflect.runtime.universe.Tree = x.$minus$eq(1)
+    cond: reflect.runtime.universe.Tree = x.$greater(0)
 
 #### For and For-Yield Loops <a name="for"> </a>
 
