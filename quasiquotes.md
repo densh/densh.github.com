@@ -12,7 +12,7 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Terminology <a name="terminology"> </a>
 
-* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators)
+* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hypned for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
 * **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
 * **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
 * **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
