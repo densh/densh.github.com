@@ -48,9 +48,13 @@ Lifting is typeclass-based approach to define representation of custom data type
     scala> q"$two + $two"
     res10: reflect.runtime.universe.Tree = 2.$plus(2)   
 
-This code runs successfully because quasiquote implementation provides default instance of `Liftable[Int]` that transforms integers into trees that represent literals.
+This code runs successfully because there is default `Liftable[Int]` instance that transforms integers into trees that represent literals. `Liftable` type is just a trait with a single absract method:
 
-To define your representation of your own data type just provide an implicit instance of `Liftable` for it:
+    trait Liftable[T] {
+      def apply(value: T): Tree
+    }
+
+To define tree representation for your own data type just provide an implicit instance of `Liftable` for it:
 
     package points
 
@@ -159,6 +163,37 @@ So in practice it's much easier to just define a liftable for given universe at 
     }
 
 ## Unlifting <a name="unlifting"> </a>
+
+Unlifting is the reverse operation to lifting: it takes a tree and recovers value from it:
+
+    trait Unliftable[T] {
+      def unapply(tree: Tree): Option[T]
+    }
+
+Due to the fact that tree might not be a represention of our data type, the return type of unapply is `Option[T]` rather than just `T`. Such signature also makes it easy to use `Unliftable` instances as extractors.
+
+Whenever `Unliftable` is available for given data type you can use it for pattern matching with the help of ascription syntax:
+
+    scala> val q"${left: Int} + ${right: Int}" = q"2 + 2"
+    left: Int = 2
+    right: Int = 2
+
+    scala> left + right
+    res4: Int = 4
+
+It's important to note that unlifting will not be performed at locations where `Name`, `TermName` or `Modifiers` is extracted by default:
+
+    scala> val q"foo.${bar: Int}" = q"foo.bar"
+    <console>:29: error: pattern type is incompatible with expected type;
+     found   : Int
+     required: reflect.runtime.universe.NameApi
+           val q"foo.${bar: Int}" = q"foo.bar"
+                            ^
+
+One can also successfully combine unquote splicing and unlifting:
+
+    scala> val q"f(..${ints: List[Int]})" = q"f(1, 2, 3)"
+    ints: List[Int] = List(1, 2, 3)
 
 ### Standard Unliftables <a name="standard-unliftables"> </a>
 
@@ -1004,8 +1039,12 @@ Pattern alternatives represent a pattern that matches whenever at least one of t
     alt: reflect.runtime.universe.Alternative = (Foo()| Bar()| Baz())
 
     scala> val pq"$first | ..$rest" = alt
-    first: reflect.runtime.universe.Tree = Foo()
-    rest: List[reflect.runtime.universe.Tree] = List(Bar(), Baz())
+    head: reflect.runtime.universe.Tree = Foo()
+    tail: List[reflect.runtime.universe.Tree] = List(Bar(), Baz())
+
+    scala> val pq"..$init | $last" = alt
+    init: List[reflect.runtime.universe.Tree] = List(Foo(), Bar())
+    last: reflect.runtime.universe.Tree = Baz()
 
 #### Tuple Pattern <a name="tuple-pattern"> </a>
 
