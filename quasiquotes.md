@@ -109,8 +109,8 @@ into a case class constructor call. In this example there a few important points
 
 Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe seperatly:
 
-    import reflect.macros.blackbox.Context
     import reflect.api.Universe
+    import reflect.macros.blackbox.Context
 
     trait LiftableImpls {
       val univese: Universe
@@ -136,7 +136,9 @@ Due to path dependent nature of current reflection API it isn't trivial to share
     }
 
 So in practice it's much easier to just define a liftable for given universe at hand:
-
+    
+    import reflect.macros.blackbox.Context
+    
     // macros defined as a macro bundle
     class MyMacros(c: Context) with MacroLiftableImpls {
       import c.universe._
