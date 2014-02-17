@@ -48,7 +48,7 @@ Lifting is typeclass-based approach to define representation of custom data type
     scala> q"$two + $two"
     res10: reflect.runtime.universe.Tree = 2.$plus(2)   
 
-This code runs successfully because quasiquote implementation provides default instance of `Liftable[Int]` that transforms integeers into trees that represent literals.
+This code runs successfully because quasiquote implementation provides default instance of `Liftable[Int]` that transforms integers into trees that represent literals.
 
 To define your representation of your own data type just provide an implicit instance of `Liftable` for it:
 
@@ -98,7 +98,7 @@ into a case class constructor call. In this example there two important points t
  `List[T]` †                    | `List(1, 2)`          | `q"s.c.i.List(1, 2)"` ‡
  `Map[K, V]` †                  | `Map(1 -> 2)`         | `q"s.c.i.Map((1, 2))"` ‡
  `Set[T]` †                     | `Set(1, 2)`           | `q"s.c.i.Set(1, 2)"` ‡
- `Either[T]` †                  | `Left(1)`             | `q"s.u.Left(1)"` ‡
+ `Either[L, R]` †               | `Left(1)`             | `q"s.u.Left(1)"` ‡
  `TupleN[...]` \* †             | `(1, 2)`              | `q"(1, 2)"`
  `TermName`                     | `TermName("foo")`     | `q"foo"`
  `TypeName`                     | `TypeName("foo")`     | `tq"foo"`
@@ -138,7 +138,7 @@ Due to path dependent nature of current reflection API it isn't trivial to share
       val universe: c.universe = c.universe
     } with LiftableImpls
     
-    // macros defined as a macro bundle
+    // macro impls defined as a macro bundle
     class MyMacros(c: Context) with MacroLiftableImpls {
       // ... 
     }
@@ -147,7 +147,7 @@ So in practice it's much easier to just define a liftable for given universe at 
     
     import reflect.macros.blackbox.Context
     
-    // macros defined as a macro bundle
+    // macro impls defined as a macro bundle
     class MyMacros(c: Context) {
       import c.universe._
  
@@ -341,12 +341,6 @@ During deconstruction you can use [unlifting](#unlifting) to extract values out 
 Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables)) 
 
 #### Identifier <a name="term-ident"> </a>
-
-Type | Value | Lifted
------|---------|-----
-Byte | 0: Byte | q"0"
-
-
 
 #### Selection <a name="selection"> </a>
 
