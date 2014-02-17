@@ -88,10 +88,10 @@ into a case class constructor call. In this example there two important points t
  `Float`                        | `0.0`                 | `q"0.0"`
  `Double`                       | `0.0D`                | `q"0.0D"`
  `Boolean`                      | `true`, `false`       | `q"true"`, `q"false"`
- `Char`                         | `'c'`                 | `q" 'c' "`
+ `Char`                         | `'c'`                 | `q"'c'"`
  `Unit`                         | `()`                  | `q"()"`
  `String`                       | `"string"`            | `q""" "string" """`
- `Symbol`                       | `'symbol`             | `q" 'symbol "`
+ `Symbol`                       | `'symbol`             | `q"'symbol"`
  `Array[T]` †                   | `Array(1, 2)`         | `q"s.Array(1, 2)"` ‡
  `Option[T]` †                  | `Some(1)`             | `q"s.Some(1)"` ‡
  `Vector[T]` †                  | `Vector(1, 2)`        | `q"s.c.i.Vector(1, 2)"` ‡
@@ -168,10 +168,10 @@ So in practice it's much easier to just define a liftable for given universe at 
  `Float`                        | `q"0.0"`              | `0.0`
  `Double`                       | `q"0.0D"`             | `0.0D`
  `Boolean`                      | `q"true"`, `q"false"` | `true`, `false`
- `Char`                         | `q" 'c' "`            | `'c'`
+ `Char`                         | `q"'c'"`              | `'c'`
  `Unit`                         | `q"()"`               | `()`
  `String`                       | `q""" "string" """`   | `"string"`
- `Symbol`                       | `q" 'symbol "`        | `'symbol`
+ `Symbol`                       | `q"'symbol"`          | `'symbol`
  `TermName`                     | `q"foo"`, `pq"foo"`   | `TermName("foo")`
  `TypeName`                     | `tq"foo"`             | `TypeName("foo")`
  `Type`                         | `tt: TypeTree`        | `tt.tpe`
@@ -340,13 +340,47 @@ During deconstruction you can use [unlifting](#unlifting) to extract values out 
 
 Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables)) 
 
-#### Identifier <a name="term-ident"> </a>
+#### Identifier and Selection <a name="term-ref"> </a>
 
-#### Selection <a name="selection"> </a>
+Identifiers and member selections are two fundamental primitives that let you refer to other definitions. Combination of two of them is also known as reference (or `RefTree`).
 
-#### Application <a name="application"> </a>
+Each term identifier is defined by its name and by the fact of being backquoted or not:
 
-#### Type Application <a name="type-application"> </a>
+    scala> val name = TermName("Foo")
+    scala> q"$name"
+    res13: reflect.runtime.universe.Ident = Foo
+
+    scala> q"`$name`"
+    res14: reflect.runtime.universe.Ident = `Foo`
+
+Although backquoted and non-backquoted identifiers may refer to the same things they are not equivalent from synactical point of view:
+
+    scala> val q"`Foo`" = q"Foo"
+    scala.MatchError: Foo (of class scala.reflect.internal.Trees$Ident)
+      ... 32 elided
+
+This is caused by the fact that backquoted identifiers have different semantics in pattern patching.
+
+Apart from matching on identifiers with given name you can also extract their name values with the help of [unlifting](#unlifting):
+
+    scala> val q"${name: TermName}" = q"Foo"
+    name: reflect.runtime.universe.TermName = Foo
+
+Similarly you can create and extract member selections:
+
+    scala> val member = TermName("bar")
+    member: reflect.runtime.universe.TermName = bar
+
+    scala> q"foo.$member"
+    res17: reflect.runtime.universe.Select = foo.bar
+
+    scala> val q"foo.$name" = q"foo.bar"
+    name: reflect.runtime.universe.Name = bar
+
+    scala> val q"foo.${name: TermName}" = q"foo.bar"
+    name: reflect.runtime.universe.TermName = bar
+
+#### Application and Type Application <a name="term-application"> </a>
 
 #### This and Super <a name="this-super"> </a>
 
@@ -753,6 +787,10 @@ is critical:
 #### Alternative Pattern <a name="alternative-pattern"> </a>
 
 ### Definitions
+
+#### Modifiers
+
+#### Templates
 
 #### Def Definition <a name="def-definition"> </a>
 
