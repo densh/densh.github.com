@@ -36,7 +36,7 @@ All examples in this guide are run in the repl with one extra import:
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
-## Referential transparency <a name="referential-transperancy"> </a>
+## Referential transparency <a name="referential-transparency"> </a>
 
 ## Lifting <a name="lifting"> </a>
 
@@ -210,10 +210,10 @@ So in practice it's much easier to just define a liftable for given universe at 
  [Literal](#literal)                    | `q"$value"`                                                 | Literal
  [Identifier](#term-ref)                | `q"$tname"` or `q"name"`                                    | Ident
  [Selection](#term-ref)                 | `q"$expr.$tname"`                                           | Select
+ [Super Selection](#super-this)         | `q"$tpname.super[$tpname].$tname"`                          | Select
+ [This](#super-this)                    | `q"$tpname.this"`                                           | This
  [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
- [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
- [This](#this-super)                    | `q"$tpname.this"`                                           | This
- [Super](#this-super)                   | `q"$tpname.super[$tpname].$tname"`                          | Tree
+ [Type Application] (#application)      | `q"$expr[..$targs]"`                                        | TypeApply
  [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
  [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
  [Return](#return)                      | `q"return $expr"`                                           | Return
@@ -234,19 +234,20 @@ So in practice it's much easier to just define a liftable for given universe at 
 
 ### Types <a name="types-summary"> </a>
 
-                                       | Quasiquote                           | Type
----------------------------------------|---------------------------------------|---------------------
- [Empty Type](#empty-type)             | `tq""`                                | TypeTree
- [Type Identifier](#type-ident)        | `tq"$tpname"` or `tq"Name"`           | Ident
- [Applied Type](#applied-type)         | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
- [Tuple Type](#tuple-type)             | `tq"(..$tpts)"`                       | Tree
- [Function Type](#function-type)       | `tq"(..$tpts) => $tpt"`               | Tree
- [Existential Type](#existential-type) | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
- [Type Selection](#type-selection)     | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
- [Dependent Type](#dependent-type)     | `tq"$ref.$tpname"`                    | Select
- [Refined Type](#refined-type)         | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
- [Singleton Type](#singleton-type)     | `tq"$ref.type"`                       | SingletonType
- [Super Type](#super-type)             | `tq"$tpname.super[$tpname].$tpname"`  | Tree
+                                          | Quasiquote                           | Type
+------------------------------------------|---------------------------------------|---------------------
+ [Empty Type](#empty-type)                | `tq""`                                | TypeTree
+ [Type Identifier](#type-ident)           | `tq"$tpname"` or `tq"Name"`           | Ident
+ [Singleton Type](#singleton-type)        | `tq"$ref.type"`                       | SingletonType
+ [Type Projection](#type-projection)      | `tq"$tpt#$tpname"`                    | SelectFromTypeTree
+ [Type Selection](#type-projection)       | `tq"$ref.$tpname"`                    | Select
+ [Super Type Selection](#type-projection) | `tq"$tpname.super[$tpname].$tpname"`  | Select
+ [This Type Selection](#type-projection)  | `tq"this.$tpname"`                    | Select
+ [Applied Type](#applied-type)            | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
+ [Compound Type](#compound-type)          | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
+ [Existential Type](#existential-type)    | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
+ [Tuple Type](#tuple-type)                | `tq"(..$tpts)"`                       | Tree
+ [Function Type](#function-type)          | `tq"(..$tpts) => $tpt"`               | Tree
 
 ### Patterns <a name="pats-summary"> </a>
  
@@ -342,7 +343,7 @@ Similarly it would work with all the literal types except `Null`. (see [standard
 
 #### Identifier and Selection <a name="term-ref"> </a>
 
-Identifiers and member selections are two fundamental primitives that let you refer to other definitions. Combination of two of them is also known as reference (or `RefTree`).
+Identifiers and member selections are two fundamental primitives that let you refer to other definitions. Combination of two of them is also known `RefTree`.
 
 Each term identifier is defined by its name and by the fact of being backquoted or not:
 
@@ -380,11 +381,10 @@ Similarly you can create and extract member selections:
     scala> val q"foo.${name: TermName}" = q"foo.bar"
     name: reflect.runtime.universe.TermName = bar
 
-#### Application and Type Application <a name="term-application"> </a>
 
-#### This and Super <a name="this-super"> </a>
+#### Super and This <a name="super-this"> </a>
 
-This and super expressions allow to select precise members within inheritance chain.
+One can use this and super to select precise members within inheritance chain.
 
 This tree supports following variations:
 
@@ -412,6 +412,8 @@ Similarly for super we have:
     name: reflect.runtime.universe.TypeName = other
     qual: reflect.runtime.universe.TypeName = T
     field: reflect.runtime.universe.Name = foo
+
+#### Application and Type Application <a name="application"> </a>
 
 #### Assign and Update <a name="assign-update"> </a>
 
@@ -746,31 +748,181 @@ is critical:
 
 #### For and For-Yield Loops <a name="for"> </a>
 
+For and For-Yield expressions allow to write monadic style comprehensions that desugar into calls to `map`, `flatMap`, `foreach` and `withFilter` methods:
+
+    scala> val `for-yield` = q"for (x <- xs; if x > 0; y = x * 2) yield x"
+    for-yield: reflect.runtime.universe.Tree =
+    xs.withFilter(((x) => x.$greater(0))).map(((x) => {
+      val y = x.$times(2);
+      scala.Tuple2(x, y)
+    })).map(((x$3) => x$3: @scala.unchecked match {
+      case scala.Tuple2((x @ _), (y @ _)) => x
+    }))
+
+Each enumerator in the comprehension can be expressed with `fq"..."` interpolator:
+ 
+    scala> val enums = List(fq"x <- xs", fq"if x > 0", fq"y = x * 2")
+    enums: List[reflect.runtime.universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
+
+    scala> val `for-yield` = q"for (..$enums) yield y"
+    for-yield: reflect.runtime.universe.Tree 
+
+Simiarly one can deconstruct for-yield back into a list of enumerators and body:
+
+    scala> val q"for (..$enums) yield $body" = `for-yield`
+    enums: List[reflect.runtime.universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
+    body: reflect.runtime.universe.Tree = x
+
+It's important to mention that For and For-Yield do not cross-match each other:
+
+    scala> val q"for (..$enums) $body" = `for-yield`
+    scala.MatchError: ...
+
 #### New <a name="new"> </a>
 
 ### Types
 
 #### Empty Type <a name="empty-type"> </a>
 
+Empty type (`tq""`) is a canonical way to say that type at given location isn't given by the user and should be inferred by the compiler:
+
+1. [Def](#def-definition) with unknown return type
+2. [Val or Var](#val-var-definition) with unknown type
+3. [Anonymous function](#function-expr) with unknown argument type
+
 #### Type Identifier <a name="type-ident"> </a>
 
-#### Applied Type <a name="applied-type"> </a>
+Similarly to [term identifiers](#term-ref) one can construct a type identifier based on a name:
 
-#### Tuple Type <a name="tuple-type"> </a>
+    scala> val name = TypeName("Foo")
+    name: reflect.runtime.universe.TypeName = Foo
 
-#### Function Type <a name="function-type"> </a>
+    scala> tq"$name"
+    res25: reflect.runtime.universe.Ident = Foo
 
-#### Existential Type <a name="existential-type"> </a>
+And deconstruct it back through [unlifting](#unlifting):
 
-#### Type Selection <a name="type-selection"> </a>
-
-#### Dependent Type <a name="dependent-type"> </a>
-
-#### Refined Type <a name="refined-type"> </a>
+    scala> val tq"${name: TypeName}" = tq"Foo"
+    name: reflect.runtime.universe.TypeName = Foo
 
 #### Singleton Type <a name="singleton-type"> </a>
 
-#### Super Type <a name="super-type"> </a>
+A singleton type is a way to express a type of a term definition that is being referenced:
+
+    scala> val singleton = tq"foo.bar.type".sr
+    singleton: String = SingletonTypeTree(Select(Ident(TermName("foo")), TermName("bar")))
+
+    scala> val tq"$ref.type" = tq"foo.bar.type"
+    ref: reflect.runtime.universe.Tree = foo.bar
+
+#### Type Projection <a name="type-projection"> </a>
+
+Type projection is fundamental way to select types as members of other types:
+
+    scala> val proj = tq"Foo#Bar"
+    proj: reflect.runtime.universe.SelectFromTypeTree = Foo#Bar
+
+    scala> val tq"$foo#$bar" = proj
+    foo: reflect.runtime.universe.Tree = Foo
+    bar: reflect.runtime.universe.TypeName = Bar
+
+As a convenience one can also select type members of terms:
+
+    scala> tq"scala.Int"
+    res32: reflect.runtime.universe.Select = scala.Int
+
+But semantically such selections are just a shortcut for a combination of singleton types and type projections:
+
+    scala> tq"scala.type#Int"
+    res33: reflect.runtime.universe.SelectFromTypeTree = scala.type#Int
+
+Lastly [similarly to expressions](#super-this) one can select members through super and this:
+
+    scala> tq"super.Bar"
+    superbar: reflect.runtime.universe.Select = super.Bar
+
+    scala> val tq"$pre.super[$parent].$field" = superbar 
+    pre: reflect.runtime.universe.TypeName =
+    parent: reflect.runtime.universe.TypeName =
+    field: reflect.runtime.universe.Name = Bar
+
+    scala> val thisfoo = tq"this.Foo"
+    thisfoo: reflect.runtime.universe.Select = this.Foo
+
+    scala> val tq"this.${tpname: TypeName}" = thisfoo
+    tpname: reflect.runtime.universe.TypeName = Foo
+
+#### Applied Type <a name="applied-type"> </a>
+
+Instantiations of parametized types can be expressed with the help of applied types (type-level equivalent of type application):
+
+    scala> val applied = tq"Foo[A, B]"
+    applied: reflect.runtime.universe.Tree = Foo[A, B]
+
+    scala> val tq"Foo[..$targs]" = applied
+    targs: List[reflect.runtime.universe.Tree] = List(A, B)
+
+Deconstruction of non-applied types will cause `targs` begin extracted as empty list:
+
+    scala> val tq"Foo[..$targs]" = tq"Foo"
+    targs: List[reflect.runtime.universe.Tree] = List()
+
+#### Compound Type <a name="compound-type"> </a>
+
+Compound type lets users to express a combination of a number of types with optional refined member list:
+
+    scala> val compound = tq"A with B with C"
+    compound: reflect.runtime.universe.CompoundTypeTree = A with B with C
+
+    scala> val tq"..$parents { }" = compound
+    parents: List[reflect.runtime.universe.Tree] = List(A, B, C)
+    defns: List[reflect.runtime.universe.Tree] = List()
+
+Braces after parents are required to signal that this type is a compound type even if there are no refinements and we just want to extract a sequence of types combined with `with` keyword.
+
+On the other side of the spectrum are pure refinements without explicit parents (a.k.a. structural types):
+
+    scala> val structural = tq"{ val x: Int; val y: Int }"
+    structural: reflect.runtime.universe.CompoundTypeTree =
+    scala.AnyRef {
+      val x: Int;
+      val y: Int
+    }
+
+    scala> val tq"{ ..$defns }" = structural
+    defns: List[reflect.runtime.universe.Tree] = List(val x: Int, val y: Int)
+
+Here we can see that AnyRef is a parent that is inserted implicitly if we don't provide any.
+
+#### Existential Type <a name="existential-type"> </a>
+
+#### Tuple Type <a name="tuple-type"> </a>
+
+[Similarly to expressions](#tuple-expr), tuple types are just a syntactic sugar over `TupleN` classes:
+
+    scala> val tup2 = tq"(A, B)"
+    tup2: reflect.runtime.universe.Tree = scala.Tuple2[A, B]
+
+    scala> val tq"(..$tpts)" = tup2
+    tpts: List[reflect.runtime.universe.Tree] = List(A, B)
+
+Analagously `Unit` type is considered to be nullary tuple:
+
+    scala> val tq"(..$tpts)" = tq"_root_.scala.Unit"
+    tpts: List[reflect.runtime.universe.Tree] = List()
+
+It's important to mention that pattern matching of reference to `Unit` is limited to either fully qualified path or a reference that contains symbols. (see [referential transparency](#referential-transparency))
+
+#### Function Type <a name="function-type"> </a>
+
+Similarly to tuples, function types are a syntactic sugar over `FunctionN` classes:
+
+    scala> val funtype = tq"(A, B) => C"
+    funtype: reflect.runtime.universe.Tree = _root_.scala.Function2[A, B, C]
+
+    scala> val tq"..$foo => $bar" = funtype
+    foo: List[reflect.runtime.universe.Tree] = List(A, B)
+    bar: reflect.runtime.universe.Tree = C
 
 ### Patterns
 
@@ -788,9 +940,9 @@ is critical:
 
 ### Definitions
 
-#### Modifiers
+#### Modifiers <a name="modifiers"> </a>
 
-#### Templates
+#### Template <a name="template"> </a>
 
 #### Def Definition <a name="def-definition"> </a>
 
