@@ -38,8 +38,6 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Lifting <a name="lifting"> </a>
 
-### Intro <a name="lifting-intro"> </a>
-
 Lifting is typeclass-based approach to define representation of custom data types as Trees.
 To define your own representation just provide an implicit instance of `Liftable` for it:
 
@@ -76,9 +74,101 @@ into a case class constructor call. In this example there a few important points
 
 ### Standard Liftables <a name="standard-liftables"> </a>
 
+ Type                           | Value                 | Representation
+--------------------------------|-----------------------|---------------
+ `Byte`, `Short`, `Int`, `Long` | `0`                   | `q"0"`
+ `Float`                        | `0.0`                 | `q"0.0"`
+ `Double`                       | `0.0D`                | `q"0.0D"`
+ `Boolean`                      | `true`, `false`       | `q"true"`, `q"false"`
+ `Char`                         | `'c'`                 | `q" 'c' "`
+ `Unit`                         | `()`                  | `q"()"`
+ `String`                       | `"string"`            | `q""" "string" """`
+ `Symbol`                       | `'symbol`             | `q" 'symbol "`
+ `Array[T]` †                   | `Array(1, 2)`         | `q"s.Array(1, 2)"` ‡
+ `Option[T]` †                  | `Some(1)`             | `q"s.Some(1)"` ‡
+ `Vector[T]` †                  | `Vector(1, 2)`        | `q"s.c.i.Vector(1, 2)"` ‡
+ `List[T]` †                    | `List(1, 2)`          | `q"s.c.i.List(1, 2)"` ‡
+ `Map[K, V]` †                  | `Map(1 -> 2)`         | `q"s.c.i.Map((1, 2))"` ‡
+ `Set[T]` †                     | `Set(1, 2)`           | `q"s.c.i.Set(1, 2)"` ‡
+ `Either[T]` †                  | `Left(1)`             | `q"s.u.Left(1)"` ‡
+ `TupleN[...]` \* †             | `(1, 2)`              | `q"(1, 2)"`
+ `TermName`                     | `TermName("foo")`     | `q"foo"`
+ `TypeName`                     | `TypeName("foo")`     | `tq"foo"`
+ `Expr`                         | `expr`                | `expr.tree`
+ `Type`                         | `typeOf[Int]`         | `TypeTree(typeof[Int])`
+ `TypeTag`                      | `ttag`                | `TypeTree(ttag.tpe)`
+ `Constant`                     | `const`               | `Literal(const)`
+ 
+ (\*) Liftable for tuples is defined for all `N` in `[2, 22]` range.
+
+ (†) All type parameters have to be Liftable themselves.
+
+ (‡) `s.` is shorthand for scala, `s.c.i.` for `scala.collection.immutable`, `s.u.` for `scala.util.`
+
 ### Sharing Liftable implementations between universes <a name="sharing-liftable"> </a>
 
+Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe seperatly:
+
+    import reflect.macros.blackbox.Context
+    import reflect.api.Universe
+
+    trait LiftableImpls {
+      val univese: Universe
+      import universe._
+      
+      implicit val liftPoint = Liftable[points.Point] { p =>
+        q"_root_.points.Point(${p.x}, ${p.y})"
+      } 
+    }
+
+    object RuntimeLiftableImpls extends { 
+      val universe: reflect.runtime.universe = reflect.runtime.univese
+    } with LiftableImpls 
+
+    trait MacroLiftableImpls extends {
+      val c: Context 
+      val universe: c.universe = c.universe
+    } with LiftableImpls
+    
+    // macros defined as a macro bundle
+    class MyMacros(c: Context) with MacroLiftableImpls {
+      // ... 
+    }
+
+So in practice it's much easier to just define a liftable for given universe at hand:
+
+    // macros defined as a macro bundle
+    class MyMacros(c: Context) with MacroLiftableImpls {
+      import c.universe._
+ 
+      implicit val liftPoint = Liftable[points.Point] { p =>
+        q"_root_.points.Point(${p.x}, ${p.y})"
+      }
+
+      // ...
+    }
+
 ## Unlifting <a name="unlifting"> </a>
+
+### Standard Unliftables <a name="standard-unliftables"> </a>
+
+ Type                           | Representation        | Value
+--------------------------------|-----------------------|------
+ `Byte`, `Short`, `Int`, `Long` | `q"0"`                | `0`
+ `Float`                        | `q"0.0"`              | `0.0`
+ `Double`                       | `q"0.0D"`             | `0.0D`
+ `Boolean`                      | `q"true"`, `q"false"` | `true`, `false`
+ `Char`                         | `q" 'c' "`            | `'c'`
+ `Unit`                         | `q"()"`               | `()`
+ `String`                       | `q""" "string" """`   | `"string"`
+ `Symbol`                       | `q" 'symbol "`        | `'symbol`
+ `TermName`                     | `q"foo"`, `pq"foo"`   | `TermName("foo")`
+ `TypeName`                     | `tq"foo"`             | `TypeName("foo")`
+ `Type`                         | `tt: TypeTree`        | `tt.tpe`
+ `Constant`                     | `lit: Literal`        | `lit.value`
+ `TupleN[...]` \*               | `q"(1, 2)"`           | `(1, 2)`
+
+ (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
 ## Referential transparency <a name="referential-transperancy"> </a>
 
@@ -208,9 +298,9 @@ Default toString formats `q""` as `<empty>`.
 Scala has a number of default built-in literals:
     
     q"1", q"1L"         // integer literals
-    q"1.0", q"1.0D"     // float literals
+    q"1.0", q"1.0D"     // floating point literals
     q"true", q"false"   // boolean literals
-    q"'c'"              // char literal
+    q"'c'"              // character literal
     q""" "string" """   // string literal
     q"'symbol"          // symbol literal
     q"null"             // null literal
@@ -227,8 +317,7 @@ Thanks to [lifting](#lifting) you can also easily create literal trees directly 
     scala> q"$x"
     res13: reflect.runtime.universe.Tree = 1
 
-This would work the same way for instances of `Byte`, `Short`, `Int`, `Long`, `Float`, `Double`, `Boolean`, `String`, `Unit` and `scala.Symbol` types.
-Lifting of null values and `Null` type isn't supported, use `q"null"` if you really mean to create null literal:
+This would work the same way for all literal types (see [standard liftables](#standard-liftables) except `Null`. Lifting of `null` value and `Null` type isn't supported, use `q"null"` if you really mean to create null literal:
 
     scala> val x = null
     scala> q"$x"
@@ -241,9 +330,15 @@ During deconstruction you can use [unlifting](#unlifting) to extract values out 
     scala> val q"${x: Int}" = q"1"
     x: Int = 1
 
-Similarly it would work with all the literal types except `Null`.
+Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables)) 
 
 #### Identifier <a name="term-ident"> </a>
+
+Type | Value | Lifted
+-----|---------|-----
+Byte | 0: Byte | q"0"
+
+
 
 #### Selection <a name="selection"> </a>
 
