@@ -40,8 +40,17 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Lifting <a name="lifting"> </a>
 
-Lifting is typeclass-based approach to define representation of custom data types as Trees.
-To define your own representation just provide an implicit instance of `Liftable` for it:
+Lifting is typeclass-based approach to define representation of custom data types as Trees. Its primary use-case is support unquoting of [literal](#literal) values and a number of reflection primitives as trees:
+
+    scala> val two = 1 + 1
+    two: Int = 2
+
+    scala> q"$two + $two"
+    res10: reflect.runtime.universe.Tree = 2.$plus(2)   
+
+This code runs successfully because quasiquote implementation provides default instance of `Liftable[Int]` that transforms integeers into trees that represent literals.
+
+To define your representation of your own data type just provide an implicit instance of `Liftable` for it:
 
     package points
 
@@ -55,12 +64,12 @@ To define your own representation just provide an implicit instance of `Liftable
     }
 
 This way whenever a value of Point type is unquoted in runtime quasiquote it will be automatically transformed
-into a case class constructor call. In this example there a few important points to take into account:
+into a case class constructor call. In this example there two important points to take into account:
 
 1. Here we only defined `Liftable` for runtime reflection. It won't be found if you try to
    use it from a macro due to the fact that each universe contains its own `Liftable` which is not
    compatible with the others. This problem is caused by path-dependant nature of current reflection
-   api. (see [sharing liftable implementation between universes](#liftable-sharing))
+   api. (see [sharing liftable implementation between universes](#reusing-liftable-impl))
 
 2. Due to lack of [referential transparency](#referential-transperancy), reference to point companion
    has to be fully qualified to ensure correctness in of this tree in every possible context. Another
@@ -70,9 +79,6 @@ into a case class constructor call. In this example there a few important points
        implicit val lift = Liftable[Point] { p =>
          q"$PointSym(${p.x}, ${p.y})"
        }
-
-3. It's possible to unquote `x` and `y` fields because there is standard instance of `Liftable[Int]`
-   available by default. (see [standard liftables](#standard-liftables))
 
 ### Standard Liftables <a name="standard-liftables"> </a>
 
@@ -109,7 +115,7 @@ into a case class constructor call. In this example there a few important points
 
 ### Reusing Liftable implementation between universes <a name="reusing-liftable-impl"> </a>
 
-Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe separately:
+Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define Liftable implementations in a trait and instantiate it for each universe separately:
 
     import reflect.api.Universe
     import reflect.macros.blackbox.Context
