@@ -204,12 +204,12 @@ So in practice it's much easier to just define a liftable for given universe at 
 
 ### Expressions <a name="exprs-summary"> </a>
 
-                                        | Quasiquote                                                 | Type
+                                        | Quasiquote                                                  | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
  [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
  [Literal](#literal)                    | `q"$value"`                                                 | Literal
- [Identifier](#term-ident)              | `q"$tname"` or `q"name"`                                    | Ident
- [Selection](#selection)                | `q"$expr.$tname"`                                           | Select
+ [Identifier](#term-ref)                | `q"$tname"` or `q"name"`                                    | Ident
+ [Selection](#term-ref)                 | `q"$expr.$tname"`                                           | Select
  [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
  [Type Application] (#type-application) | `q"$expr[..$targs]"`                                        | TypeApply
  [This](#this-super)                    | `q"$tpname.this"`                                           | This
