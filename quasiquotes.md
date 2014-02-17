@@ -105,7 +105,7 @@ into a case class constructor call. In this example there a few important points
 
  (‡) `s.` is shorthand for scala, `s.c.i.` for `scala.collection.immutable`, `s.u.` for `scala.util.`
 
-### Sharing Liftable implementations between universes <a name="sharing-liftable"> </a>
+### Reusing Liftable implementation between universes <a name="reuse-liftable-impl"> </a>
 
 Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe seperatly:
 
