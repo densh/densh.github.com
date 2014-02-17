@@ -256,9 +256,9 @@ So in practice it's much easier to just define a liftable for given universe at 
  [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
  [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`    | Bind
  [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
- [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
- [Type Pattern](#type-pattern)               | `pq"$tname: $tpt"`     | Typed  
+ [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
  [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
+ [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
  
 ### Definitions <a name="defns-summary"> </a>
 
@@ -928,15 +928,94 @@ Similarly to tuples, function types are a syntactic sugar over `FunctionN` class
 
 #### Wildcard Pattern <a name="wildcard-pattern"> </a>
 
+Wildcard pattern (`pq"_"`) is the simplest form of pattern that matches any input.
+
 #### Binding Pattern <a name="binding-pattern"> </a>
+
+Binding pattern is a way to name pattern or one it's part as local variable:
+
+    scala> val bindtup = pq"foo @ (1, 2)"
+    bindtup: reflect.runtime.universe.Bind = (foo @ scala.Tuple2(1, 2))
+
+    scala> val pq"$name @ $pat" = bindtup
+    name: reflect.runtime.universe.Name = foo
+    pat: reflect.runtime.universe.Tree = scala.Tuple2(1, 2)
+
+Binding without explicit pattern is equivalent to the one with wildcard pattern:
+
+    scala> val pq"$name @ $pat" = pq"foo"
+    name: reflect.runtime.universe.Name = foo
+    pat: reflect.runtime.universe.Tree = _
 
 #### Extractor Pattern <a name="extractor-pattern"> </a>
 
-#### Tuple Pattern <a name="tuple-pattern"> </a>
+Extractors are a neat way to delegate a pattern matching to another object's unapply method:
+
+    scala> val extractor = pq"Foo(1, 2, 3)"
+    extractor: reflect.runtime.universe.Tree = Foo(1, 2, 3)
+
+    scala> val pq"$id(..$pats)" = extractor
+    id: reflect.runtime.universe.Tree = Foo
+    pats: List[reflect.runtime.universe.Tree] = List(1, 2, 3)
 
 #### Type Pattern <a name="type-pattern"> </a>
 
+Type patterns are a way to check type of a scrutinee:
+
+    scala> val isT = pq"_: T"
+    isT: reflect.runtime.universe.Typed = (_: T)
+
+    scala> val pq"_: $tpt" = isT
+    tpt: reflect.runtime.universe.Tree = T
+
+Combination of non-wildcard name and type pattern is represented as bind over wildcard type pattern:
+
+    scala> val fooIsT = pq"foo: T"
+    fooIsT: reflect.runtime.universe.Bind = (foo @ (_: T))
+
+    scala> val pq"$name @ (_: $tpt)" = fooIsT
+    name: reflect.runtime.universe.Name = foo
+    tpt: reflect.runtime.universe.Tree = T
+
+Another important thing to mention is a type variable patterns:
+
+    scala> val typevar = pq"_: F[t]"
+    typevar: reflect.runtime.universe.Typed = (_: F[(t @ <empty>)])
+
+One can construct (and similarly deconstruct) such patterns by following steps:
+
+    scala> val name = TypeName("t")
+    name: reflect.runtime.universe.TypeName = t
+
+    scala> val t = pq"$name"
+    t: reflect.runtime.universe.Bind = (t @ _)
+
+    scala> val tpt = tq"F[$t]"
+    tpt: reflect.runtime.universe.Tree = F[(t @ _)]
+
+    scala> val typevar = pq"_: $tpt"
+    typevar: reflect.runtime.universe.Typed = (_: F[(t @ _)])
+
 #### Alternative Pattern <a name="alternative-pattern"> </a>
+
+Pattern alternatives represent a pattern that matches whenever at least one of the branches matches:
+
+    scala> val alt = pq"Foo() | Bar() | Baz()"
+    alt: reflect.runtime.universe.Alternative = (Foo()| Bar()| Baz())
+
+    scala> val pq"$first | ..$rest" = alt
+    first: reflect.runtime.universe.Tree = Foo()
+    rest: List[reflect.runtime.universe.Tree] = List(Bar(), Baz())
+
+#### Tuple Pattern <a name="tuple-pattern"> </a>
+
+Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tuple patterns are just a syntactic sugar that expands as `TupleN` extractor:
+
+    scala> val tup2pat = pq"(a, b)"
+    tup2pat: reflect.runtime.universe.Tree = scala.Tuple2((a @ _), (b @ _))
+
+    scala> val pq"(..$pats)" = tup2pat
+    pats: List[reflect.runtime.universe.Tree] = List((a @ _), (b @ _))
 
 ### Definitions
 
