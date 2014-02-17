@@ -109,7 +109,7 @@ into a case class constructor call. In this example there a few important points
 
 ### Reusing Liftable implementation between universes <a name="reusing-liftable-impl"> </a>
 
-Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe seperatly:
+Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define implementations in a trait and instantiate it for each universe separately:
 
     import reflect.api.Universe
     import reflect.macros.blackbox.Context
