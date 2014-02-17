@@ -36,6 +36,8 @@ All examples in this guide are run in the repl with one extra import:
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
+## Referential transparency <a name="referential-transperancy"> </a>
+
 ## Lifting <a name="lifting"> </a>
 
 Lifting is typeclass-based approach to define representation of custom data types as Trees.
@@ -140,7 +142,7 @@ So in practice it's much easier to just define a liftable for given universe at 
     import reflect.macros.blackbox.Context
     
     // macros defined as a macro bundle
-    class MyMacros(c: Context) with MacroLiftableImpls {
+    class MyMacros(c: Context) {
       import c.universe._
  
       implicit val liftPoint = Liftable[points.Point] { p =>
@@ -171,8 +173,6 @@ So in practice it's much easier to just define a liftable for given universe at 
  `TupleN[...]` \*               | `q"(1, 2)"`           | `(1, 2)`
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
-
-## Referential transparency <a name="referential-transperancy"> </a>
 
 ## Syntax summary <a name="syntax-summary"> </a>
 
