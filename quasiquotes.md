@@ -10,9 +10,9 @@ layout: page
 
 ## Intro {:#intro} 
 
-All examples in this guide are run in the repl with one extra import:
+All examples in this guide are run in the repl with one extra line:
 
-    import scala.reflect.runtime.universe._
+    val universe = reflect.runtime.universe; import universe._
 
 ## Interpolators {:#interpolators}
 
@@ -36,7 +36,7 @@ Lifting is and extensible way to unquote custom data types in quasiquotes. Its p
     two: Int = 2
 
     scala> val four = "$two + $two"
-    four: reflect.runtime.universe.Tree = 2.$plus(2)   
+    four: universe.Tree = 2.$plus(2)   
 
 This code runs successfully because `Int` is considered to be `Liftable` by default. (see [standard liftables](#standard-liftables)). `Liftable` type is just a trait with a single absract method that defined mapping of given type to tree:
 
@@ -50,7 +50,7 @@ One can also combine lifting and unquote splicing:
 
     scala> val ints = List(1, 2, 3)
     scala> val f123 = q"f(..$ints)"
-    f123: reflect.runtime.universe.Tree = f(1, 2, 3)
+    f123: universe.Tree = f(1, 2, 3)
 
 In this case each element of the list will be lifted separately and the result will be spliced into the quote. 
 
@@ -60,7 +60,7 @@ To define tree representation for your own data type just provide an implicit in
 
     package points
 
-    import scala.reflect.runtime.universe._ 
+    import scala.universe._ 
 
     case class Point(x: Int, y: Int)
     object Point {
@@ -140,7 +140,7 @@ Due to path dependent nature of current reflection API it isn't trivial to share
     }
 
     object RuntimeLiftableImpls extends LiftableImpls {
-      val universe: reflect.runtime.universe.type = reflect.runtime.universe
+      val universe: universe.type = universe
     }
 
     trait MacroLiftableImpls extends LiftableImpls {
@@ -192,7 +192,7 @@ It's important to note that unlifting will not be performed at locations where `
     scala> val q"foo.${bar: Int}" = q"foo.bar"
     <console>:29: error: pattern type is incompatible with expected type;
      found   : Int
-     required: reflect.runtime.universe.NameApi
+     required: universe.NameApi
            val q"foo.${bar: Int}" = q"foo.bar"
                             ^
 
@@ -209,7 +209,7 @@ Similarly to liftables one can define your own unliftables:
 
     package Points
  
-    import scala.reflect.runtime.universe._
+    import scala.universe._
 
     case class Point(x: Int, y: Int) 
     object Point {
@@ -256,7 +256,7 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
-## Terminology Summary {:#terminology}
+## Terminology summary {:#terminology}
 
 * **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
 * **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
@@ -322,7 +322,7 @@ Here one needs to pay attention to a few nuances:
 
 ### Types {:#types-summary}
 
-                                          | Quasiquote                           | Type
+                                          | Quasiquote                            | Type
 ------------------------------------------|---------------------------------------|---------------------
  [Empty Type](#empty-type)                | `tq""`                                | TypeTree
  [Type Identifier](#type-ident)           | `tq"$tpname"` or `tq"Name"`           | Ident
@@ -339,7 +339,7 @@ Here one needs to pay attention to a few nuances:
 
 ### Patterns {:#pats-summary}
  
-                                             | Quasiquote            | Type                    
+                                             | Quasiquote             | Type                    
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
  [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`    | Bind
@@ -350,7 +350,7 @@ Here one needs to pay attention to a few nuances:
  
 ### Definitions {:#defns-summary}
 
-                                       | Quasiquote                                                                                                        | Type 
+                                       | Quasiquote                                                                                                         | Type 
 ---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
  [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
@@ -367,14 +367,14 @@ Here one needs to pay attention to a few nuances:
 
 ### Auxiliary {:#aux-summary}
 
-                                     | Quasiquote                 | Type
+                                     | Quasiquote                  | Type
 -------------------------------------|-----------------------------|--------
  [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
  [Generator Enumerator](#for)        | `fq"$pat <- $expr"`         | Tree
  [Value Definition Enumerator](#for) | `fq"$pat = $expr"`          | Tree
  [Guard Enumerator](#for)            | `fq"if $expr"`              | Tree
 
-## Syntax Details 
+## Syntax details 
 
 ### Expressions
 
@@ -406,13 +406,13 @@ Scala has a number of default built-in literals:
 All of those values have Literal type except symbols which have different representation:
     
     scala> q"'symbol"
-    res12: reflect.runtime.universe.Tree = scala.Symbol("symbol")
+    res12: universe.Tree = scala.Symbol("symbol")
 
 Thanks to [lifting](#lifting) you can also easily create literal trees directly from values of corresponding types:
 
     scala> val x = 1
     scala> q"$x"
-    res13: reflect.runtime.universe.Tree = 1
+    res13: universe.Tree = 1
 
 This would work the same way for all literal types (see [standard liftables](#standard-liftables) except `Null`. Lifting of `null` value and `Null` type isn't supported, use `q"null"` if you really mean to create null literal:
 
@@ -437,10 +437,10 @@ Each term identifier is defined by its name and by the fact of being backquoted 
 
     scala> val name = TermName("Foo")
     scala> q"$name"
-    res13: reflect.runtime.universe.Ident = Foo
+    res13: universe.Ident = Foo
 
     scala> q"`$name`"
-    res14: reflect.runtime.universe.Ident = `Foo`
+    res14: universe.Ident = `Foo`
 
 Although backquoted and non-backquoted identifiers may refer to the same things they are not equivalent from synactical point of view:
 
@@ -453,21 +453,21 @@ This is caused by the fact that backquoted identifiers have different semantics 
 Apart from matching on identifiers with given name you can also extract their name values with the help of [unlifting](#unlifting):
 
     scala> val q"${name: TermName}" = q"Foo"
-    name: reflect.runtime.universe.TermName = Foo
+    name: universe.TermName = Foo
 
 Similarly you can create and extract member selections:
 
     scala> val member = TermName("bar")
-    member: reflect.runtime.universe.TermName = bar
+    member: universe.TermName = bar
 
     scala> q"foo.$member"
-    res17: reflect.runtime.universe.Select = foo.bar
+    res17: universe.Select = foo.bar
 
     scala> val q"foo.$name" = q"foo.bar"
-    name: reflect.runtime.universe.Name = bar
+    name: universe.Name = bar
 
     scala> val q"foo.${name: TermName}" = q"foo.bar"
-    name: reflect.runtime.universe.TermName = bar
+    name: universe.TermName = bar
 
 
 #### Super and This {:#super-this}
@@ -477,29 +477,29 @@ One can use this and super to select precise members within inheritance chain.
 This tree supports following variations:
 
     scala> val q"$name.this" = q"this"
-    name: reflect.runtime.universe.TypeName =
+    name: universe.TypeName =
 
     scala> val q"$name.this" = q"foo.this"
-    name: reflect.runtime.universe.TypeName = foov
+    name: universe.TypeName = foov
 
 So plain `q"this"` is equivalent to `q"${tpnme.EMPTY}.this"`. 
 
 Similarly for super we have:
 
     scala> val q"$name.super[$qual].$field" = q"super.foo"
-    name: reflect.runtime.universe.TypeName =
-    qual: reflect.runtime.universe.TypeName =
-    field: reflect.runtime.universe.Name = foo
+    name: universe.TypeName =
+    qual: universe.TypeName =
+    field: universe.Name = foo
 
     scala> val q"$name.super[$qual].$field" = q"super[T].foo"
-    name: reflect.runtime.universe.TypeName =
-    qual: reflect.runtime.universe.TypeName = T
-    field: reflect.runtime.universe.Name = foo
+    name: universe.TypeName =
+    qual: universe.TypeName = T
+    field: universe.Name = foo
 
     scala> val q"$name.super[$qual].$field" = q"other.super[T].foo"
-    name: reflect.runtime.universe.TypeName = other
-    qual: reflect.runtime.universe.TypeName = T
-    field: reflect.runtime.universe.Name = foo
+    name: universe.TypeName = other
+    qual: universe.TypeName = T
+    field: universe.Name = foo
 
 #### Application and Type Application {:#application}
 
@@ -508,10 +508,10 @@ Similarly for super we have:
 Assign and update are two related ways to explictly mutate a variable or collection:
 
     scala> val assign = q"x = 2"
-    assign: reflect.runtime.universe.Tree = x = 2
+    assign: universe.Tree = x = 2
 
     scala> val update = q"array(0) = 1"
-    update: reflect.runtime.universe.Tree = array.update(0, 1)
+    update: universe.Tree = array.update(0, 1)
 
 As you can see update syntax is just a syntactic sugar that gets represented as update method call on given object.
 
@@ -528,38 +528,38 @@ Where `array(0)` has the same AST as function application.
 Return expressions is used to perform early return from a function. 
 
     scala> val ret = q"return 2 + 2"
-    ret: reflect.runtime.universe.Return = return 2.$plus(2)
+    ret: universe.Return = return 2.$plus(2)
 
     scala> val q"return $expr" = ret 
-    expr: reflect.runtime.universe.Tree = 2.$plus(2)
+    expr: universe.Tree = 2.$plus(2)
 
 #### Throw {:#throw}
 
 Throw expression is used to throw a throwable:
 
     scala> val thr = q"throw new Exception"
-    thr: reflect.runtime.universe.Throw = throw new Exception()
+    thr: universe.Throw = throw new Exception()
 
     scala> val q"throw $expr" = thr 
-    expr: reflect.runtime.universe.Tree = new Exception()
+    expr: universe.Tree = new Exception()
 
 #### Ascription {:#ascription}
 
 Ascriptions lets users to annotate type of intermidiate expression:
 
     scala> val ascribed = q"(1 + 1): Int"
-    ascribed: reflect.runtime.universe.Typed = (1.$plus(1): Int)
+    ascribed: universe.Typed = (1.$plus(1): Int)
 
     scala> val q"$expr: $tpt" = ascribed
-    expr: reflect.runtime.universe.Tree = 1.$plus(1)
-    tpt: reflect.runtime.universe.Tree = Int
+    expr: universe.Tree = 1.$plus(1)
+    tpt: universe.Tree = Int
 
 #### Tuple {:#tuple-expr}
 
 Tuples are heteregeneous data structures with built-in user-friendly syntax. The syntax itself is just a sugar that maps onto `scala.TupleN` calls:
 
     scala> val tup = q"(a, b)"
-    tup: reflect.runtime.universe.Tree = scala.Tuple2(a, b)
+    tup: universe.Tree = scala.Tuple2(a, b)
 
 At the moment tuples are only supported up to 22 arity but this is just an implementation restriction that might be lifted in the future. To find out if given arity is supported use:
 
@@ -572,35 +572,35 @@ At the moment tuples are only supported up to 22 arity but this is just an imple
 Despited the fact that `Tuple1` class exists there is no built-in syntax for it. Single parens around expression do not change its meaning:
  
     scala> val inparens = q"(a)"
-    inparens: reflect.runtime.universe.Ident = a
+    inparens: universe.Ident = a
 
 It is also common to treat `Unit` as nullary tuple:
    
     scala> val elems = List.empty[Tree]
     scala> val nullary = q"(..$elems)"
-    nullary: reflect.runtime.universe.Tree = ()
+    nullary: universe.Tree = ()
 
 Quasiquotes also support deconstruction of tuples of arbitrary arity:
 
     scala> val q"(..$elems)" = q"(a, b)"
-    elems: List[reflect.runtime.universe.Tree] = List(a, b)   
+    elems: List[universe.Tree] = List(a, b)   
 
 This pattern also matches expressions as single-element tuples:
 
     scala> val q"(..$elems)" = q"(a)"
-    elems: List[reflect.runtime.universe.Tree] = List(a)
+    elems: List[universe.Tree] = List(a)
 
 And unit as nullary tuple:
 
     scala> val q"(..$elems)" = q"()"
-    elems: List[reflect.runtime.universe.Tree] = List()
+    elems: List[universe.Tree] = List()
 
 #### Block {:#block}
 
 Blocks are a fundamental primitive to express sequence of actions or bindings. `q"..."` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
 
     scala> val t = q"a; b; c" 
-    t: reflect.runtime.universe.Tree =
+    t: universe.Tree =
     {
       a;
       b;
@@ -610,10 +610,10 @@ Blocks are a fundamental primitive to express sequence of actions or bindings. `
 The only difference between `q"{...}"` and `q"..."` is handling of case when just a single element is present. `q"..."` always returns an element itself while a block still remains a block if a single element is not expression:
 
     scala> val t = q"val x = 2"
-    t: reflect.runtime.universe.ValDef = val x = 2
+    t: universe.ValDef = val x = 2
 
     scala> val t = q"{ val x = 2 }"
-    t: reflect.runtime.universe.Tree =
+    t: universe.Tree =
     {
       val x = 2;
       ()
@@ -622,14 +622,14 @@ The only difference between `q"{...}"` and `q"..."` is handling of case when jus
 Blocks can also be flattened into another blocks with `..$`:
 
     scala> val ab = q"a; b"
-    ab: reflect.runtime.universe.Tree =
+    ab: universe.Tree =
     {
       a;
       b
     }
 
     scala> q"..$ab; c"
-    res0: reflect.runtime.universe.Tree =
+    res0: universe.Tree =
     {
       a;
       b;
@@ -639,36 +639,36 @@ Blocks can also be flattened into another blocks with `..$`:
 The same syntax can be used to deconstruct blocks:
 
     scala> val q"..$stats" = q"a; b; c"
-    stats: List[reflect.runtime.universe.Tree] = List(a, b, c)
+    stats: List[universe.Tree] = List(a, b, c)
 
 Deconstruction always returns just user-defined contents of a block:
 
     scala> val q"..$stats" = q"{ val x = 2 }"
-    stats: List[reflect.runtime.universe.Tree] = List(val x = 2)
+    stats: List[universe.Tree] = List(val x = 2)
 
 Due to automatic flattening of single-element blocks with expressions, expressions themselves are considered to be single-element blocks:
 
     scala> val q"..$stats" = q"foo"
-    stats: List[reflect.runtime.universe.Tree] = List(foo)
+    stats: List[universe.Tree] = List(foo)
 
 Empty tree is considered to be a zero-element block:
 
     scala> val q"..$stats" = q""
-    stats: List[reflect.runtime.universe.Tree] = List()
+    stats: List[universe.Tree] = List()
 
 #### If {:#if}
 
 There are two variaties of if expressions: those with else clause and without it:
 
     scala> val q"if ($cond) $thenp else $elsep" = q"if (true) a else b"
-    cond: reflect.runtime.universe.Tree = true
-    thenp: reflect.runtime.universe.Tree = a
-    elsep: reflect.runtime.universe.Tree = b
+    cond: universe.Tree = true
+    thenp: universe.Tree = a
+    elsep: universe.Tree = b
 
     scala> val q"if ($cond) $thenp else $elsep" = q"if (true) a"
-    cond: reflect.runtime.universe.Tree = true
-    thenp: reflect.runtime.universe.Tree = a
-    elsep: reflect.runtime.universe.Tree = ()
+    cond: universe.Tree = true
+    thenp: universe.Tree = a
+    elsep: universe.Tree = ()
 
 No-else clause is equivalent to else clause that contains a unit literal. 
 
@@ -686,21 +686,21 @@ Combination of the two forms allows to construct and deconstruct arbitrary patte
 
     scala> val q"$expr match { case ..$cases }" = 
                q"foo match { case _: Foo => 'foo case _ => 'notfoo }"
-    expr: reflect.runtime.universe.Tree = foo
-    cases: List[reflect.runtime.universe.CaseDef] = List(case (_: Foo) => scala.Symbol("foo"), case _ => scala.Symbol("notfoo"))
+    expr: universe.Tree = foo
+    cases: List[universe.CaseDef] = List(case (_: Foo) => scala.Symbol("foo"), case _ => scala.Symbol("notfoo"))
 
     scala> val cq"$pat1 => $body1" :: cq"$pat2 => $body2" :: Nil = cases
-    pat1: reflect.runtime.universe.Tree = (_: Foo)
-    body1: reflect.runtime.universe.Tree = scala.Symbol("foo")
-    pat2: reflect.runtime.universe.Tree = _
-    body2: reflect.runtime.universe.Tree = scala.Symbol("notfoo")
+    pat1: universe.Tree = (_: Foo)
+    body1: universe.Tree = scala.Symbol("foo")
+    pat2: universe.Tree = _
+    body2: universe.Tree = scala.Symbol("notfoo")
 
 Case clause without body is equivalent to one holding unit literal:
 
     scala> val cq"$pat if $expr1 => $expr2" = cq"_ =>"
-    pat: reflect.runtime.universe.Tree = _
-    expr1: reflect.runtime.universe.Tree = <empty>
-    expr2: reflect.runtime.universe.Tree = ()
+    pat: universe.Tree = _
+    expr1: universe.Tree = <empty>
+    expr2: universe.Tree = ()
 
 No-guard is represented with the help of [empty expression](#empty-expr).
 
@@ -709,21 +709,21 @@ No-guard is represented with the help of [empty expression](#empty-expr).
 Try expression is used to handle possible error conditions and ensure consistent state via finally. Both error handling cases and finally clause are optional.
 
     scala> val q"try $a catch { case ..$b } finally $c" = q"try t"
-    a: reflect.runtime.universe.Tree = t
-    b: List[reflect.runtime.universe.CaseDef] = List()
-    c: reflect.runtime.universe.Tree = <empty>
+    a: universe.Tree = t
+    b: List[universe.CaseDef] = List()
+    c: universe.Tree = <empty>
 
     scala> val q"try $a catch { case ..$b } finally $c" = 
                q"try t catch { case _: C => }"
-    a: reflect.runtime.universe.Tree = t
-    b: List[reflect.runtime.universe.CaseDef] = List(case (_: C) => ())
-    c: reflect.runtime.universe.Tree = <empty>
+    a: universe.Tree = t
+    b: List[universe.CaseDef] = List(case (_: C) => ())
+    c: universe.Tree = <empty>
 
     scala> val q"try $a catch { case ..$b } finally $c" = 
                q"try t finally f"
-    a: reflect.runtime.universe.Tree = t
-    b: List[reflect.runtime.universe.CaseDef] = List()
-    c: reflect.runtime.universe.Tree = f
+    a: universe.Tree = t
+    b: List[universe.CaseDef] = List()
+    c: universe.Tree = f
 
 Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
 
@@ -732,13 +732,13 @@ Similarly to [pattern matching](#match) cases can be further deconstructed with 
 There are three ways to create anonymous function:
 
     scala> val f1 = q"_ + 1"
-    anon1: reflect.runtime.universe.Function = ((x$4) => x$4.$plus(1))
+    anon1: universe.Function = ((x$4) => x$4.$plus(1))
 
     scala> val f2 = q"(a => a + 1)"
-    anon2: reflect.runtime.universe.Function = ((a) => a.$plus(1))
+    anon2: universe.Function = ((a) => a.$plus(1))
 
     scala> val f3 = q"(a: Int) => a + 1"
-    anon3: reflect.runtime.universe.Function = ((a: Int) => a.$plus(1))
+    anon3: universe.Function = ((a: Int) => a.$plus(1))
 
 First one uses placeholder syntax. Second one names function parameter but still relies
 on type inference to infer its type. Last one explicitly defines function parameter. Due
@@ -749,13 +749,13 @@ Parameters are represented as [Vals](#val-var-definition). If you want to progra
 its type inferred you need to use [empty type](#empty-type):
 
     scala> val tpt = tq""
-    tpt: reflect.runtime.universe.TypeTree = <type ?>
+    tpt: universe.TypeTree = <type ?>
 
     scala> val param = q"val x: $tpt"
-    param: reflect.runtime.universe.ValDef = val x
+    param: universe.ValDef = val x
 
     scala> q"($param => x)"
-    res30: reflect.runtime.universe.Function = ((x) => x)
+    res30: universe.Function = ((x) => x)
 
 All of the given forms are represented in the same way and could be uniformly matched upon:
 
@@ -770,11 +770,11 @@ All of the given forms are represented in the same way and could be uniformly ma
 You can also tear arguments further apart:
 
     scala> val q"(..$args => $_)" = f3
-    args: List[reflect.runtime.universe.ValDef] = List(val a: Int = _)
+    args: List[universe.ValDef] = List(val a: Int = _)
 
     scala> val List(q"$_ val $name: $tpt") = args
-    name: reflect.runtime.universe.TermName = a
-    tpt: reflect.runtime.universe.Tree = Int
+    name: universe.TermName = a
+    tpt: universe.Tree = Int
 
 It's recommended to use underscore pattern in place of modifiers even if you don't plan to work 
 with them as parameters may contains additional flags which might cause match errors.
@@ -785,7 +785,7 @@ Partial functions are a neat syntax that lets you express functions with
 limited domain with the help of pattern matching:
 
     scala> val pf = q"{ case i: Int if i > 0 => i * i }"
-    pf: reflect.runtime.universe.Match =
+    pf: universe.Match =
     <empty> match {
       case (i @ (_: Int)) if i.$greater(0) => i.$times(i)
     }
@@ -793,11 +793,11 @@ limited domain with the help of pattern matching:
 Under the hood they are represented as match trees with [empty](#empty-expr) scrutinee.
 
     scala> val q"{ case ..$cases }" = pf
-    cases: List[reflect.runtime.universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
+    cases: List[universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
 
     scala> val q"$expr match { case ..$cases }" = pf
-    expr: reflect.runtime.universe.Tree = <empty>
-    cases: List[reflect.runtime.universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
+    expr: universe.Tree = <empty>
+    cases: List[universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
 
 #### While and Do-While Loops {:#while}
 
@@ -805,7 +805,7 @@ While and do-while loops are low-level control structures that used when perform
 is critical:
 
     scala> val `while` = q"while(x > 0) x -= 1"
-    while: reflect.runtime.universe.LabelDef =
+    while: universe.LabelDef =
     while$6(){
       if (x.$greater(0))
         {
@@ -817,11 +817,11 @@ is critical:
     }
 
     scala> val q"while($cond) $body" = `while`
-    cond: reflect.runtime.universe.Tree = x.$greater(0)
-    body: reflect.runtime.universe.Tree = x.$minus$eq(1)
+    cond: universe.Tree = x.$greater(0)
+    body: universe.Tree = x.$minus$eq(1)
 
     scala> val `do-while` = q"do x -= 1 while (x > 0)"
-    do-while: reflect.runtime.universe.LabelDef =
+    do-while: universe.LabelDef =
     doWhile$2(){
       x.$minus$eq(1);
       if (x.$greater(0))
@@ -831,15 +831,15 @@ is critical:
     }
 
     scala> val q"do $body while($cond)" = `do-while`
-    body: reflect.runtime.universe.Tree = x.$minus$eq(1)
-    cond: reflect.runtime.universe.Tree = x.$greater(0)
+    body: universe.Tree = x.$minus$eq(1)
+    cond: universe.Tree = x.$greater(0)
 
 #### For and For-Yield Loops {:#for}
 
 For and For-Yield expressions allow to write monadic style comprehensions that desugar into calls to `map`, `flatMap`, `foreach` and `withFilter` methods:
 
     scala> val `for-yield` = q"for (x <- xs; if x > 0; y = x * 2) yield x"
-    for-yield: reflect.runtime.universe.Tree =
+    for-yield: universe.Tree =
     xs.withFilter(((x) => x.$greater(0))).map(((x) => {
       val y = x.$times(2);
       scala.Tuple2(x, y)
@@ -850,16 +850,16 @@ For and For-Yield expressions allow to write monadic style comprehensions that d
 Each enumerator in the comprehension can be expressed with `fq"..."` interpolator:
  
     scala> val enums = List(fq"x <- xs", fq"if x > 0", fq"y = x * 2")
-    enums: List[reflect.runtime.universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
+    enums: List[universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
 
     scala> val `for-yield` = q"for (..$enums) yield y"
-    for-yield: reflect.runtime.universe.Tree 
+    for-yield: universe.Tree 
 
 Simiarly one can deconstruct for-yield back into a list of enumerators and body:
 
     scala> val q"for (..$enums) yield $body" = `for-yield`
-    enums: List[reflect.runtime.universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
-    body: reflect.runtime.universe.Tree = x
+    enums: List[universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
+    body: universe.Tree = x
 
 It's important to mention that For and For-Yield do not cross-match each other:
 
@@ -883,15 +883,15 @@ Empty type (`tq""`) is a canonical way to say that type at given location isn't 
 Similarly to [term identifiers](#term-ref) one can construct a type identifier based on a name:
 
     scala> val name = TypeName("Foo")
-    name: reflect.runtime.universe.TypeName = Foo
+    name: universe.TypeName = Foo
 
     scala> tq"$name"
-    res25: reflect.runtime.universe.Ident = Foo
+    res25: universe.Ident = Foo
 
 And deconstruct it back through [unlifting](#unlifting):
 
     scala> val tq"${name: TypeName}" = tq"Foo"
-    name: reflect.runtime.universe.TypeName = Foo
+    name: universe.TypeName = Foo
 
 #### Singleton Type {:#singleton-type}
 
@@ -901,84 +901,84 @@ A singleton type is a way to express a type of a term definition that is being r
     singleton: String = SingletonTypeTree(Select(Ident(TermName("foo")), TermName("bar")))
 
     scala> val tq"$ref.type" = tq"foo.bar.type"
-    ref: reflect.runtime.universe.Tree = foo.bar
+    ref: universe.Tree = foo.bar
 
 #### Type Projection {:#type-projection}
 
 Type projection is fundamental way to select types as members of other types:
 
     scala> val proj = tq"Foo#Bar"
-    proj: reflect.runtime.universe.SelectFromTypeTree = Foo#Bar
+    proj: universe.SelectFromTypeTree = Foo#Bar
 
     scala> val tq"$foo#$bar" = proj
-    foo: reflect.runtime.universe.Tree = Foo
-    bar: reflect.runtime.universe.TypeName = Bar
+    foo: universe.Tree = Foo
+    bar: universe.TypeName = Bar
 
 As a convenience one can also select type members of terms:
 
     scala> tq"scala.Int"
-    res32: reflect.runtime.universe.Select = scala.Int
+    res32: universe.Select = scala.Int
 
 But semantically such selections are just a shortcut for a combination of singleton types and type projections:
 
     scala> tq"scala.type#Int"
-    res33: reflect.runtime.universe.SelectFromTypeTree = scala.type#Int
+    res33: universe.SelectFromTypeTree = scala.type#Int
 
 Lastly [similarly to expressions](#super-this) one can select members through super and this:
 
     scala> val superbar = tq"super.Bar"
-    superbar: reflect.runtime.universe.Select = super.Bar
+    superbar: universe.Select = super.Bar
 
     scala> val tq"$pre.super[$parent].$field" = superbar 
-    pre: reflect.runtime.universe.TypeName =
-    parent: reflect.runtime.universe.TypeName =
-    field: reflect.runtime.universe.Name = Bar
+    pre: universe.TypeName =
+    parent: universe.TypeName =
+    field: universe.Name = Bar
 
     scala> val thisfoo = tq"this.Foo"
-    thisfoo: reflect.runtime.universe.Select = this.Foo
+    thisfoo: universe.Select = this.Foo
 
     scala> val tq"this.${tpname: TypeName}" = thisfoo
-    tpname: reflect.runtime.universe.TypeName = Foo
+    tpname: universe.TypeName = Foo
 
 #### Applied Type {:#applied-type}
 
 Instantiations of parametized types can be expressed with the help of applied types (type-level equivalent of type application):
 
     scala> val applied = tq"Foo[A, B]"
-    applied: reflect.runtime.universe.Tree = Foo[A, B]
+    applied: universe.Tree = Foo[A, B]
 
     scala> val tq"Foo[..$targs]" = applied
-    targs: List[reflect.runtime.universe.Tree] = List(A, B)
+    targs: List[universe.Tree] = List(A, B)
 
 Deconstruction of non-applied types will cause `targs` begin extracted as empty list:
 
     scala> val tq"Foo[..$targs]" = tq"Foo"
-    targs: List[reflect.runtime.universe.Tree] = List()
+    targs: List[universe.Tree] = List()
 
 #### Compound Type {:#compound-type}
 
 Compound type lets users to express a combination of a number of types with optional refined member list:
 
     scala> val compound = tq"A with B with C"
-    compound: reflect.runtime.universe.CompoundTypeTree = A with B with C
+    compound: universe.CompoundTypeTree = A with B with C
 
     scala> val tq"..$parents { }" = compound
-    parents: List[reflect.runtime.universe.Tree] = List(A, B, C)
-    defns: List[reflect.runtime.universe.Tree] = List()
+    parents: List[universe.Tree] = List(A, B, C)
+    defns: List[universe.Tree] = List()
 
 Braces after parents are required to signal that this type is a compound type even if there are no refinements and we just want to extract a sequence of types combined with `with` keyword.
 
 On the other side of the spectrum are pure refinements without explicit parents (a.k.a. structural types):
 
     scala> val structural = tq"{ val x: Int; val y: Int }"
-    structural: reflect.runtime.universe.CompoundTypeTree =
+    structural: universe.CompoundTypeTree =
     scala.AnyRef {
       val x: Int;
       val y: Int
     }
 
     scala> val tq"{ ..$defns }" = structural
-    defns: List[reflect.runtime.universe.Tree] = List(val x: Int, val y: Int)
+    defns: List[universe.Tree] = List(val x: Int, val y: Int)
 
 Here we can see that AnyRef is a parent that is inserted implicitly if we don't provide any.
 
@@ -989,15 +989,15 @@ Here we can see that AnyRef is a parent that is inserted implicitly if we don't 
 [Similarly to expressions](#tuple-expr), tuple types are just a syntactic sugar over `TupleN` classes:
 
     scala> val tup2 = tq"(A, B)"
-    tup2: reflect.runtime.universe.Tree = scala.Tuple2[A, B]
+    tup2: universe.Tree = scala.Tuple2[A, B]
 
     scala> val tq"(..$tpts)" = tup2
-    tpts: List[reflect.runtime.universe.Tree] = List(A, B)
+    tpts: List[universe.Tree] = List(A, B)
 
 Analagously `Unit` type is considered to be nullary tuple:
 
     scala> val tq"(..$tpts)" = tq"_root_.scala.Unit"
-    tpts: List[reflect.runtime.universe.Tree] = List()
+    tpts: List[universe.Tree] = List()
 
 It's important to mention that pattern matching of reference to `Unit` is limited to either fully qualified path or a reference that contains symbols. (see [referential transparency](#referential-transparency))
 
@@ -1006,11 +1006,11 @@ It's important to mention that pattern matching of reference to `Unit` is limite
 Similarly to tuples, function types are a syntactic sugar over `FunctionN` classes:
 
     scala> val funtype = tq"(A, B) => C"
-    funtype: reflect.runtime.universe.Tree = _root_.scala.Function2[A, B, C]
+    funtype: universe.Tree = _root_.scala.Function2[A, B, C]
 
     scala> val tq"..$foo => $bar" = funtype
-    foo: List[reflect.runtime.universe.Tree] = List(A, B)
-    bar: reflect.runtime.universe.Tree = C
+    foo: List[universe.Tree] = List(A, B)
+    bar: universe.Tree = C
 
 ### Patterns
 
@@ -1023,91 +1023,91 @@ Wildcard pattern (`pq"_"`) is the simplest form of pattern that matches any inpu
 Binding pattern is a way to name pattern or one it's part as local variable:
 
     scala> val bindtup = pq"foo @ (1, 2)"
-    bindtup: reflect.runtime.universe.Bind = (foo @ scala.Tuple2(1, 2))
+    bindtup: universe.Bind = (foo @ scala.Tuple2(1, 2))
 
     scala> val pq"$name @ $pat" = bindtup
-    name: reflect.runtime.universe.Name = foo
-    pat: reflect.runtime.universe.Tree = scala.Tuple2(1, 2)
+    name: universe.Name = foo
+    pat: universe.Tree = scala.Tuple2(1, 2)
 
 Binding without explicit pattern is equivalent to the one with wildcard pattern:
 
     scala> val pq"$name @ $pat" = pq"foo"
-    name: reflect.runtime.universe.Name = foo
-    pat: reflect.runtime.universe.Tree = _
+    name: universe.Name = foo
+    pat: universe.Tree = _
 
 #### Extractor Pattern {:#extractor-pattern}
 
 Extractors are a neat way to delegate a pattern matching to another object's unapply method:
 
     scala> val extractor = pq"Foo(1, 2, 3)"
-    extractor: reflect.runtime.universe.Tree = Foo(1, 2, 3)
+    extractor: universe.Tree = Foo(1, 2, 3)
 
     scala> val pq"$id(..$pats)" = extractor
-    id: reflect.runtime.universe.Tree = Foo
-    pats: List[reflect.runtime.universe.Tree] = List(1, 2, 3)
+    id: universe.Tree = Foo
+    pats: List[universe.Tree] = List(1, 2, 3)
 
 #### Type Pattern {:#type-pattern}
 
 Type patterns are a way to check type of a scrutinee:
 
     scala> val isT = pq"_: T"
-    isT: reflect.runtime.universe.Typed = (_: T)
+    isT: universe.Typed = (_: T)
 
     scala> val pq"_: $tpt" = isT
-    tpt: reflect.runtime.universe.Tree = T
+    tpt: universe.Tree = T
 
 Combination of non-wildcard name and type pattern is represented as bind over wildcard type pattern:
 
     scala> val fooIsT = pq"foo: T"
-    fooIsT: reflect.runtime.universe.Bind = (foo @ (_: T))
+    fooIsT: universe.Bind = (foo @ (_: T))
 
     scala> val pq"$name @ (_: $tpt)" = fooIsT
-    name: reflect.runtime.universe.Name = foo
-    tpt: reflect.runtime.universe.Tree = T
+    name: universe.Name = foo
+    tpt: universe.Tree = T
 
 Another important thing to mention is a type variable patterns:
 
     scala> val typevar = pq"_: F[t]"
-    typevar: reflect.runtime.universe.Typed = (_: F[(t @ <empty>)])
+    typevar: universe.Typed = (_: F[(t @ <empty>)])
 
 One can construct (and similarly deconstruct) such patterns by following steps:
 
     scala> val name = TypeName("t")
-    name: reflect.runtime.universe.TypeName = t
+    name: universe.TypeName = t
 
     scala> val t = pq"$name"
-    t: reflect.runtime.universe.Bind = (t @ _)
+    t: universe.Bind = (t @ _)
 
     scala> val tpt = tq"F[$t]"
-    tpt: reflect.runtime.universe.Tree = F[(t @ _)]
+    tpt: universe.Tree = F[(t @ _)]
 
     scala> val typevar = pq"_: $tpt"
-    typevar: reflect.runtime.universe.Typed = (_: F[(t @ _)])
+    typevar: universe.Typed = (_: F[(t @ _)])
 
 #### Alternative Pattern {:#alternative-pattern}
 
 Pattern alternatives represent a pattern that matches whenever at least one of the branches matches:
 
     scala> val alt = pq"Foo() | Bar() | Baz()"
-    alt: reflect.runtime.universe.Alternative = (Foo()| Bar()| Baz())
+    alt: universe.Alternative = (Foo()| Bar()| Baz())
 
     scala> val pq"$first | ..$rest" = alt
-    head: reflect.runtime.universe.Tree = Foo()
-    tail: List[reflect.runtime.universe.Tree] = List(Bar(), Baz())
+    head: universe.Tree = Foo()
+    tail: List[universe.Tree] = List(Bar(), Baz())
 
     scala> val pq"..$init | $last" = alt
-    init: List[reflect.runtime.universe.Tree] = List(Foo(), Bar())
-    last: reflect.runtime.universe.Tree = Baz()
+    init: List[universe.Tree] = List(Foo(), Bar())
+    last: universe.Tree = Baz()
 
 #### Tuple Pattern {:#tuple-pattern}
 
 Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tuple patterns are just a syntactic sugar that expands as `TupleN` extractor:
 
     scala> val tup2pat = pq"(a, b)"
-    tup2pat: reflect.runtime.universe.Tree = scala.Tuple2((a @ _), (b @ _))
+    tup2pat: universe.Tree = scala.Tuple2((a @ _), (b @ _))
 
     scala> val pq"(..$pats)" = tup2pat
-    pats: List[reflect.runtime.universe.Tree] = List((a @ _), (b @ _))
+    pats: List[universe.Tree] = List((a @ _), (b @ _))
 
 ### Definitions
 
