@@ -4,7 +4,10 @@ layout: page
 
 # Quasiquote guide (WIP)
 
-## Prerequisties <a name="prereq"> </a>
+* Table of contents.
+{:toc}
+
+## Intro <a name="intro"> </a> 
 
 All examples in this guide are run in the repl with one extra import:
 
@@ -21,9 +24,6 @@ All examples in this guide are run in the repl with one extra import:
 * **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
 * [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
 * [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
-
-## Intro <a name="intro"> </a> 
-
 ## Splicing and cardinality <a name="splicing"> </a>
 
 ## Interpolators <a name="interpolators"> </a>
@@ -40,21 +40,31 @@ All examples in this guide are run in the repl with one extra import:
 
 ## Lifting <a name="lifting"> </a>
 
-Lifting is typeclass-based approach to define representation of custom data types as Trees. Its primary use-case is support unquoting of [literal](#literal) values and a number of reflection primitives as trees:
+Lifting is and extensible way to unquote custom data types in quasiquotes. Its primary use-case is support unquoting of [literal](#literal) values and a number of reflection primitives as trees:
 
     scala> val two = 1 + 1
     two: Int = 2
 
-    scala> q"$two + $two"
-    res10: reflect.runtime.universe.Tree = 2.$plus(2)   
+    scala> val four = "$two + $two"
+    four: reflect.runtime.universe.Tree = 2.$plus(2)   
 
-This code runs successfully because there is default `Liftable[Int]` instance that transforms integers into trees that represent literals. `Liftable` type is just a trait with a single absract method:
+This code runs successfully because `Int` is considered to be `Liftable` by default. (see [standard liftables](#standard-liftables)). `Liftable` type is just a trait with a single absract method that defined mapping of given type to tree:
 
     trait Liftable[T] {
       def apply(value: T): Tree
     }
 
-### Bring your own <a name="bring-your-own"> </a>
+Whenever there is implicit value of `Liftable[T]` is available one can unquote `T` in quasiquote. A number of data types are supported natively and will never triger usage of `Liftable` representation even if it\'s available: subtypes of `Tree`, `Symbol`, `Name` and `Modifiers`.
+
+One can also combine lifting and unquote splicing:
+
+    scala> val ints = List(1, 2, 3)
+    scala> val f123 = q"f(..$ints)"
+    f123: reflect.runtime.universe.Tree = f(1, 2, 3)
+
+In this case each element of the list will be lifted separately and the result will be spliced into the quote. 
+
+### Bring your own <a name="bring-your-own-liftable"> </a>
 
 To define tree representation for your own data type just provide an implicit instance of `Liftable` for it:
 
@@ -71,6 +81,10 @@ To define tree representation for your own data type just provide an implicit in
 
 This way whenever a value of Point type is unquoted in runtime quasiquote it will be automatically transformed
 into a case class constructor call. In this example there two important points to take into account:
+
+0. Liftable companion contains helper `apply` method to simplifies creation of `Liftable` instances.
+   It takes a single type parameter `T` and a `T => Tree` function as a single value parameter and 
+   returns a `Liftable[T]`.
 
 1. Here we only defined `Liftable` for runtime reflection. It won't be found if you try to
    use it from a macro due to the fact that each universe contains its own `Liftable` which is not
@@ -196,6 +210,31 @@ One can also successfully combine unquote splicing and unlifting:
 
     scala> val q"f(..${ints: List[Int]})" = q"f(1, 2, 3)"
     ints: List[Int] = List(1, 2, 3)
+
+Analogously to lifting it would unlift arguments of the function elementwise and wrap the result into a list.
+
+### Bring your own <a name="bring-your-own-unliftable"> </a>
+
+Similarly to liftables one can define your own unliftables:
+
+    implicit val unliftPoint = Unliftable[points.Point] {
+      case q"_root_.points.Point(${x: Int}, ${y: Int})" => Point(x, y)
+    }
+
+Here one needs to pay attention to a few nuances:
+
+0. Similarly to `Liftable`, `Unliftable` defines a helper `apply` function in companion
+   to simplify creation of `Unliftable` instances which takes a type parameter `T` and 
+   a partial function `PartialFunction[Tree, T]` and returns `Unliftable[T]`. At all 
+   inputs where partial function is defined it's expected to unconditionally return
+   instance of `T`.
+
+1. Pattern used in this unliftable will only match fully qualified reference to Point that
+   starts with `_root_`. It won't match other possible shapes of the reference and they have
+   to be specified by hand. This problem is caused by lack of [referential transparency](#referential-transparency).
+
+2. The pattern will also only match trees that have literal `Int` arguments. 
+   It won't work for other expressions that might evaluate to `Int`.
 
 ### Standard Unliftables <a name="standard-unliftables"> </a>
 
@@ -1062,7 +1101,7 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 
 #### Modifiers <a name="modifiers"> </a>
 
-#### Template <a name="template"> </a>
+#### Templates <a name="template"> </a>
 
 #### Def Definition <a name="def-definition"> </a>
 
