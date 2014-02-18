@@ -4,6 +4,7 @@ layout: page
 
 # Quasiquote guide (WIP)
 
+<a name="toc"> </a>
 * Table of contents.
 {:toc}
 
@@ -914,7 +915,7 @@ But semantically such selections are just a shortcut for a combination of single
 
 Lastly [similarly to expressions](#super-this) one can select members through super and this:
 
-    scala> tq"super.Bar"
+    scala> val superbar = tq"super.Bar"
     superbar: reflect.runtime.universe.Select = super.Bar
 
     scala> val tq"$pre.super[$parent].$field" = superbar 
