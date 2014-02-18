@@ -14,19 +14,6 @@ All examples in this guide are run in the repl with one extra import:
 
     import scala.reflect.runtime.universe._
 
-## Terminology {:#terminology}
-
-* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
-* **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
-* **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
-* **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
-* **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
-* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
-* **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
-* [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
-* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
-## Splicing and cardinality {:#splicing}
-
 ## Interpolators {:#interpolators}
 
     | Used for 
@@ -36,6 +23,8 @@ All examples in this guide are run in the repl with one extra import:
  pq | [patterns](#pats-summary)
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
+
+## Splicing and cardinality {:#splicing}
 
 ## Referential transparency {:#referential-transparency}
 
@@ -55,7 +44,7 @@ This code runs successfully because `Int` is considered to be `Liftable` by defa
       def apply(value: T): Tree
     }
 
-Whenever there is implicit value of `Liftable[T]` is available one can unquote `T` in quasiquote. A number of data types are supported natively and will never triger usage of `Liftable` representation even if it\'s available: subtypes of `Tree`, `Symbol`, `Name` and `Modifiers`.
+Whenever there is implicit value of `Liftable[T]` is available one can unquote `T` in quasiquote. A number of data types are supported natively and will never triger usage of `Liftable` representation even if it\'s available: subtypes of `Tree`, `Symbol`, `Name`, `Modifiers` and `FlagSet`. (see [type classes as objects and implicits](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf))
 
 One can also combine lifting and unquote splicing:
 
@@ -181,7 +170,7 @@ So in practice it's much easier to just define a liftable for given universe at 
 
 ## Unlifting {:#unlifting}
 
-Unlifting is the reverse operation to lifting: it takes a tree and recovers value from it:
+Unlifting is the reverse operation to [lifting](#lifting): it takes a tree and recovers value from it:
 
     trait Unliftable[T] {
       def unapply(tree: Tree): Option[T]
@@ -189,7 +178,7 @@ Unlifting is the reverse operation to lifting: it takes a tree and recovers valu
 
 Due to the fact that tree might not be a represention of our data type, the return type of unapply is `Option[T]` rather than just `T`. Such signature also makes it easy to use `Unliftable` instances as extractors.
 
-Whenever `Unliftable` is available for given data type you can use it for pattern matching with the help of ascription syntax:
+Whenever implicit instance of `Unliftable` is available for given data type you can use it for pattern matching with the help of ascription syntax:
 
     scala> val q"${left: Int} + ${right: Int}" = q"2 + 2"
     left: Int = 2
@@ -238,7 +227,7 @@ Here one needs to pay attention to a few nuances:
    instance of `T`.
 
 1. We only define `Unliftable` for runtime universe, it won't be available in macros.
-   (see [sharing liftable implementations](#sharing-liftable-impls))
+   (see [sharing liftable implementations](#reusing-liftable-impl))
 
 2. Pattern used in this unliftable will only match fully qualified reference to Point that
    starts with `_root_`. It won't match other possible shapes of the reference and they have
@@ -266,6 +255,18 @@ Here one needs to pay attention to a few nuances:
  `TupleN[...]` \*               | `q"(1, 2)"`           | `(1, 2)`
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
+
+## Terminology Summary {:#terminology}
+
+* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
+* **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
+* **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
+* **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
+* **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
+* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
+* **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
+* [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
+* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
 
 ## Syntax summary {:#syntax-summary}
 
@@ -1129,3 +1130,9 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 #### Package and Package Object Definitions{:#package-definition}
 
 #### Import Definition {:#import-definition}
+
+## Future prospects
+
+* Referential transperancy: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
+* Alternative to Scheme's ellipsis: [SI-8164](https://issues.scala-lang.org/browse/SI-8164)
+* Safety by construction 
