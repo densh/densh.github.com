@@ -4,17 +4,17 @@ layout: page
 
 # Quasiquote guide (WIP)
 
-<a name="toc"> </a>
+{:#toc}
 * Table of contents.
 {:toc}
 
-## Intro <a name="intro"> </a> 
+## Intro {:#intro} 
 
 All examples in this guide are run in the repl with one extra import:
 
     import scala.reflect.runtime.universe._
 
-## Terminology <a name="terminology"> </a>
+## Terminology {:#terminology}
 
 * **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
 * **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
@@ -25,9 +25,9 @@ All examples in this guide are run in the repl with one extra import:
 * **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
 * [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
 * [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
-## Splicing and cardinality <a name="splicing"> </a>
+## Splicing and cardinality {:#splicing}
 
-## Interpolators <a name="interpolators"> </a>
+## Interpolators {:#interpolators}
 
     | Used for 
 ----|----------------------------------------------------------------
@@ -37,9 +37,9 @@ All examples in this guide are run in the repl with one extra import:
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
-## Referential transparency <a name="referential-transparency"> </a>
+## Referential transparency {:#referential-transparency}
 
-## Lifting <a name="lifting"> </a>
+## Lifting {:#lifting}
 
 Lifting is and extensible way to unquote custom data types in quasiquotes. Its primary use-case is support unquoting of [literal](#literal) values and a number of reflection primitives as trees:
 
@@ -65,7 +65,7 @@ One can also combine lifting and unquote splicing:
 
 In this case each element of the list will be lifted separately and the result will be spliced into the quote. 
 
-### Bring your own <a name="bring-your-own-liftable"> </a>
+### Bring your own {:#bring-your-own-liftable}
 
 To define tree representation for your own data type just provide an implicit instance of `Liftable` for it:
 
@@ -101,7 +101,7 @@ into a case class constructor call. In this example there two important points t
          q"$PointSym(${p.x}, ${p.y})"
        }
 
-### Standard Liftables <a name="standard-liftables"> </a>
+### Standard Liftables {:#standard-liftables}
 
  Type                           | Value                 | Representation
 --------------------------------|-----------------------|---------------
@@ -134,7 +134,7 @@ into a case class constructor call. In this example there two important points t
 
  (‡) `s.` is shorthand for scala, `s.c.i.` for `scala.collection.immutable`, `s.u.` for `scala.util.`
 
-### Reusing Liftable implementation between universes <a name="reusing-liftable-impl"> </a>
+### Reusing Liftable implementation between universes {:#reusing-liftable-impl}
 
 Due to path dependent nature of current reflection API it isn't trivial to share the same Liftable definition between both macro and runtime universes. A possible way to do this is to define Liftable implementations in a trait and instantiate it for each universe separately:
 
@@ -179,7 +179,7 @@ So in practice it's much easier to just define a liftable for given universe at 
       // ...
     }
 
-## Unlifting <a name="unlifting"> </a>
+## Unlifting {:#unlifting}
 
 Unlifting is the reverse operation to lifting: it takes a tree and recovers value from it:
 
@@ -214,12 +214,19 @@ One can also successfully combine unquote splicing and unlifting:
 
 Analogously to lifting it would unlift arguments of the function elementwise and wrap the result into a list.
 
-### Bring your own <a name="bring-your-own-unliftable"> </a>
+### Bring your own {:#bring-your-own-unliftable}
 
 Similarly to liftables one can define your own unliftables:
 
-    implicit val unliftPoint = Unliftable[points.Point] {
-      case q"_root_.points.Point(${x: Int}, ${y: Int})" => Point(x, y)
+    package Points
+ 
+    import scala.reflect.runtime.universe._
+
+    case class Point(x: Int, y: Int) 
+    object Point {
+      implicit val unliftPoint = Unliftable[points.Point] {
+        case q"_root_.points.Point(${x: Int}, ${y: Int})" => Point(x, y)
+      }
     }
 
 Here one needs to pay attention to a few nuances:
@@ -230,14 +237,17 @@ Here one needs to pay attention to a few nuances:
    inputs where partial function is defined it's expected to unconditionally return
    instance of `T`.
 
-1. Pattern used in this unliftable will only match fully qualified reference to Point that
+1. We only define `Unliftable` for runtime universe, it won't be available in macros.
+   (see [sharing liftable implementations](#sharing-liftable-impls))
+
+2. Pattern used in this unliftable will only match fully qualified reference to Point that
    starts with `_root_`. It won't match other possible shapes of the reference and they have
    to be specified by hand. This problem is caused by lack of [referential transparency](#referential-transparency).
 
-2. The pattern will also only match trees that have literal `Int` arguments. 
+3. The pattern will also only match trees that have literal `Int` arguments. 
    It won't work for other expressions that might evaluate to `Int`.
 
-### Standard Unliftables <a name="standard-unliftables"> </a>
+### Standard Unliftables {:#standard-unliftables}
 
  Type                           | Representation        | Value
 --------------------------------|-----------------------|------
@@ -257,9 +267,9 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
-## Syntax summary <a name="syntax-summary"> </a>
+## Syntax summary {:#syntax-summary}
 
-### Abbreviations <a name="abbrev"> </a>
+### Abbreviations {:#abbrev}
 
 * `tname: TermName`
 * `tpname: TypeName`
@@ -279,7 +289,7 @@ Here one needs to pay attention to a few nuances:
 * `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
 * `sels: List[Tree]` where each element is an import selector
 
-### Expressions <a name="exprs-summary"> </a>
+### Expressions {:#exprs-summary}
 
                                         | Quasiquote                                                  | Type
 ----------------------------------------|-------------------------------------------------------------|-------------------------
@@ -309,7 +319,7 @@ Here one needs to pay attention to a few nuances:
  [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                             | Tree
  [New](#new)                            | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
 
-### Types <a name="types-summary"> </a>
+### Types {:#types-summary}
 
                                           | Quasiquote                           | Type
 ------------------------------------------|---------------------------------------|---------------------
@@ -326,7 +336,7 @@ Here one needs to pay attention to a few nuances:
  [Tuple Type](#tuple-type)                | `tq"(..$tpts)"`                       | Tree
  [Function Type](#function-type)          | `tq"(..$tpts) => $tpt"`               | Tree
 
-### Patterns <a name="pats-summary"> </a>
+### Patterns {:#pats-summary}
  
                                              | Quasiquote            | Type                    
 ---------------------------------------------|------------------------|-------------------
@@ -337,7 +347,7 @@ Here one needs to pay attention to a few nuances:
  [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
  [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
  
-### Definitions <a name="defns-summary"> </a>
+### Definitions {:#defns-summary}
 
                                        | Quasiquote                                                                                                        | Type 
 ---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
@@ -354,7 +364,7 @@ Here one needs to pay attention to a few nuances:
  [Package Object](#package-definition) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
  [Import](#import-definition)          | `q"import $ref.{..$sels}"`                                                                                         | Import
 
-### Auxiliary <a name="aux-summary"> </a>
+### Auxiliary {:#aux-summary}
 
                                      | Quasiquote                 | Type
 -------------------------------------|-----------------------------|--------
@@ -367,7 +377,7 @@ Here one needs to pay attention to a few nuances:
 
 ### Expressions
 
-#### Empty <a name="empty-expr"> </a>
+#### Empty {:#empty-expr}
 
 `q""` is used to indicate that some part of the tree is not provided by the user:
 
@@ -379,7 +389,7 @@ Here one needs to pay attention to a few nuances:
 
 Default toString formats `q""` as `<empty>`.
 
-#### Literal <a name="literal"> </a>
+#### Literal {:#literal}
 
 Scala has a number of default built-in literals:
     
@@ -418,7 +428,7 @@ During deconstruction you can use [unlifting](#unlifting) to extract values out 
 
 Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables)) 
 
-#### Identifier and Selection <a name="term-ref"> </a>
+#### Identifier and Selection {:#term-ref}
 
 Identifiers and member selections are two fundamental primitives that let you refer to other definitions. Combination of two of them is also known `RefTree`.
 
@@ -459,7 +469,7 @@ Similarly you can create and extract member selections:
     name: reflect.runtime.universe.TermName = bar
 
 
-#### Super and This <a name="super-this"> </a>
+#### Super and This {:#super-this}
 
 One can use this and super to select precise members within inheritance chain.
 
@@ -490,9 +500,9 @@ Similarly for super we have:
     qual: reflect.runtime.universe.TypeName = T
     field: reflect.runtime.universe.Name = foo
 
-#### Application and Type Application <a name="application"> </a>
+#### Application and Type Application {:#application}
 
-#### Assign and Update <a name="assign-update"> </a>
+#### Assign and Update {:#assign-update}
 
 Assign and update are two related ways to explictly mutate a variable or collection:
 
@@ -512,7 +522,7 @@ Nevertheless quasiquotes let you deconstruct both of them uniformly according to
 
 Where `array(0)` has the same AST as function application. 
 
-#### Return <a name="return"> </a>
+#### Return {:#return}
 
 Return expressions is used to perform early return from a function. 
 
@@ -522,7 +532,7 @@ Return expressions is used to perform early return from a function.
     scala> val q"return $expr" = ret 
     expr: reflect.runtime.universe.Tree = 2.$plus(2)
 
-#### Throw <a name="throw"> </a>
+#### Throw {:#throw}
 
 Throw expression is used to throw a throwable:
 
@@ -532,7 +542,7 @@ Throw expression is used to throw a throwable:
     scala> val q"throw $expr" = thr 
     expr: reflect.runtime.universe.Tree = new Exception()
 
-#### Ascription <a name="ascription"> </a>
+#### Ascription {:#ascription}
 
 Ascriptions lets users to annotate type of intermidiate expression:
 
@@ -543,7 +553,7 @@ Ascriptions lets users to annotate type of intermidiate expression:
     expr: reflect.runtime.universe.Tree = 1.$plus(1)
     tpt: reflect.runtime.universe.Tree = Int
 
-#### Tuple <a name="tuple-expr"> </a>
+#### Tuple {:#tuple-expr}
 
 Tuples are heteregeneous data structures with built-in user-friendly syntax. The syntax itself is just a sugar that maps onto `scala.TupleN` calls:
 
@@ -584,7 +594,7 @@ And unit as nullary tuple:
     scala> val q"(..$elems)" = q"()"
     elems: List[reflect.runtime.universe.Tree] = List()
 
-#### Block <a name="block"> </a>
+#### Block {:#block}
 
 Blocks are a fundamental primitive to express sequence of actions or bindings. `q"..."` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
 
@@ -645,7 +655,7 @@ Empty tree is considered to be a zero-element block:
     scala> val q"..$stats" = q""
     stats: List[reflect.runtime.universe.Tree] = List()
 
-#### If <a name="if"> </a>
+#### If {:#if}
 
 There are two variaties of if expressions: those with else clause and without it:
 
@@ -661,7 +671,7 @@ There are two variaties of if expressions: those with else clause and without it
 
 No-else clause is equivalent to else clause that contains a unit literal. 
 
-#### Pattern Match <a name="match"> </a>
+#### Pattern Match {:#match}
 
 Pattern matching is cornerstone feature of Scala that lets you deconstruct values into their components:
     
@@ -693,7 +703,7 @@ Case clause without body is equivalent to one holding unit literal:
 
 No-guard is represented with the help of [empty expression](#empty-expr).
 
-#### Try <a name="try"> </a>
+#### Try {:#try}
 
 Try expression is used to handle possible error conditions and ensure consistent state via finally. Both error handling cases and finally clause are optional.
 
@@ -716,7 +726,7 @@ Try expression is used to handle possible error conditions and ensure consistent
 
 Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
 
-#### Function <a name="function-expr"> </a>
+#### Function {:#function-expr}
 
 There are three ways to create anonymous function:
 
@@ -768,7 +778,7 @@ You can also tear arguments further apart:
 It's recommended to use underscore pattern in place of modifiers even if you don't plan to work 
 with them as parameters may contains additional flags which might cause match errors.
 
-#### Partial Function <a name="partial-function"> </a>
+#### Partial Function {:#partial-function}
 
 Partial functions are a neat syntax that lets you express functions with
 limited domain with the help of pattern matching:
@@ -788,7 +798,7 @@ Under the hood they are represented as match trees with [empty](#empty-expr) scr
     expr: reflect.runtime.universe.Tree = <empty>
     cases: List[reflect.runtime.universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
 
-#### While and Do-While Loops <a name="while"> </a>
+#### While and Do-While Loops {:#while}
 
 While and do-while loops are low-level control structures that used when performance of iteration
 is critical:
@@ -823,7 +833,7 @@ is critical:
     body: reflect.runtime.universe.Tree = x.$minus$eq(1)
     cond: reflect.runtime.universe.Tree = x.$greater(0)
 
-#### For and For-Yield Loops <a name="for"> </a>
+#### For and For-Yield Loops {:#for}
 
 For and For-Yield expressions allow to write monadic style comprehensions that desugar into calls to `map`, `flatMap`, `foreach` and `withFilter` methods:
 
@@ -855,11 +865,11 @@ It's important to mention that For and For-Yield do not cross-match each other:
     scala> val q"for (..$enums) $body" = `for-yield`
     scala.MatchError: ...
 
-#### New <a name="new"> </a>
+#### New {:#new}
 
 ### Types
 
-#### Empty Type <a name="empty-type"> </a>
+#### Empty Type {:#empty-type}
 
 Empty type (`tq""`) is a canonical way to say that type at given location isn't given by the user and should be inferred by the compiler:
 
@@ -867,7 +877,7 @@ Empty type (`tq""`) is a canonical way to say that type at given location isn't 
 2. [Val or Var](#val-var-definition) with unknown type
 3. [Anonymous function](#function-expr) with unknown argument type
 
-#### Type Identifier <a name="type-ident"> </a>
+#### Type Identifier {:#type-ident}
 
 Similarly to [term identifiers](#term-ref) one can construct a type identifier based on a name:
 
@@ -882,7 +892,7 @@ And deconstruct it back through [unlifting](#unlifting):
     scala> val tq"${name: TypeName}" = tq"Foo"
     name: reflect.runtime.universe.TypeName = Foo
 
-#### Singleton Type <a name="singleton-type"> </a>
+#### Singleton Type {:#singleton-type}
 
 A singleton type is a way to express a type of a term definition that is being referenced:
 
@@ -892,7 +902,7 @@ A singleton type is a way to express a type of a term definition that is being r
     scala> val tq"$ref.type" = tq"foo.bar.type"
     ref: reflect.runtime.universe.Tree = foo.bar
 
-#### Type Projection <a name="type-projection"> </a>
+#### Type Projection {:#type-projection}
 
 Type projection is fundamental way to select types as members of other types:
 
@@ -929,7 +939,7 @@ Lastly [similarly to expressions](#super-this) one can select members through su
     scala> val tq"this.${tpname: TypeName}" = thisfoo
     tpname: reflect.runtime.universe.TypeName = Foo
 
-#### Applied Type <a name="applied-type"> </a>
+#### Applied Type {:#applied-type}
 
 Instantiations of parametized types can be expressed with the help of applied types (type-level equivalent of type application):
 
@@ -944,7 +954,7 @@ Deconstruction of non-applied types will cause `targs` begin extracted as empty 
     scala> val tq"Foo[..$targs]" = tq"Foo"
     targs: List[reflect.runtime.universe.Tree] = List()
 
-#### Compound Type <a name="compound-type"> </a>
+#### Compound Type {:#compound-type}
 
 Compound type lets users to express a combination of a number of types with optional refined member list:
 
@@ -971,9 +981,9 @@ On the other side of the spectrum are pure refinements without explicit parents 
 
 Here we can see that AnyRef is a parent that is inserted implicitly if we don't provide any.
 
-#### Existential Type <a name="existential-type"> </a>
+#### Existential Type {:#existential-type}
 
-#### Tuple Type <a name="tuple-type"> </a>
+#### Tuple Type {:#tuple-type}
 
 [Similarly to expressions](#tuple-expr), tuple types are just a syntactic sugar over `TupleN` classes:
 
@@ -990,7 +1000,7 @@ Analagously `Unit` type is considered to be nullary tuple:
 
 It's important to mention that pattern matching of reference to `Unit` is limited to either fully qualified path or a reference that contains symbols. (see [referential transparency](#referential-transparency))
 
-#### Function Type <a name="function-type"> </a>
+#### Function Type {:#function-type}
 
 Similarly to tuples, function types are a syntactic sugar over `FunctionN` classes:
 
@@ -1003,11 +1013,11 @@ Similarly to tuples, function types are a syntactic sugar over `FunctionN` class
 
 ### Patterns
 
-#### Wildcard Pattern <a name="wildcard-pattern"> </a>
+#### Wildcard Pattern {:#wildcard-pattern}
 
 Wildcard pattern (`pq"_"`) is the simplest form of pattern that matches any input.
 
-#### Binding Pattern <a name="binding-pattern"> </a>
+#### Binding Pattern {:#binding-pattern}
 
 Binding pattern is a way to name pattern or one it's part as local variable:
 
@@ -1024,7 +1034,7 @@ Binding without explicit pattern is equivalent to the one with wildcard pattern:
     name: reflect.runtime.universe.Name = foo
     pat: reflect.runtime.universe.Tree = _
 
-#### Extractor Pattern <a name="extractor-pattern"> </a>
+#### Extractor Pattern {:#extractor-pattern}
 
 Extractors are a neat way to delegate a pattern matching to another object's unapply method:
 
@@ -1035,7 +1045,7 @@ Extractors are a neat way to delegate a pattern matching to another object's una
     id: reflect.runtime.universe.Tree = Foo
     pats: List[reflect.runtime.universe.Tree] = List(1, 2, 3)
 
-#### Type Pattern <a name="type-pattern"> </a>
+#### Type Pattern {:#type-pattern}
 
 Type patterns are a way to check type of a scrutinee:
 
@@ -1073,7 +1083,7 @@ One can construct (and similarly deconstruct) such patterns by following steps:
     scala> val typevar = pq"_: $tpt"
     typevar: reflect.runtime.universe.Typed = (_: F[(t @ _)])
 
-#### Alternative Pattern <a name="alternative-pattern"> </a>
+#### Alternative Pattern {:#alternative-pattern}
 
 Pattern alternatives represent a pattern that matches whenever at least one of the branches matches:
 
@@ -1088,7 +1098,7 @@ Pattern alternatives represent a pattern that matches whenever at least one of t
     init: List[reflect.runtime.universe.Tree] = List(Foo(), Bar())
     last: reflect.runtime.universe.Tree = Baz()
 
-#### Tuple Pattern <a name="tuple-pattern"> </a>
+#### Tuple Pattern {:#tuple-pattern}
 
 Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tuple patterns are just a syntactic sugar that expands as `TupleN` extractor:
 
@@ -1100,22 +1110,22 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 
 ### Definitions
 
-#### Modifiers <a name="modifiers"> </a>
+#### Modifiers {:#modifiers}
 
-#### Templates <a name="template"> </a>
+#### Templates {:#template}
 
-#### Def Definition <a name="def-definition"> </a>
+#### Def Definition {:#def-definition}
 
-#### Val and Var Definitions <a name="val-var-definition"> </a>
+#### Val and Var Definitions {:#val-var-definition}
 
-#### Type Definition <a name="type-definition"> </a>
+#### Type Definition {:#type-definition}
 
-#### Class Definition <a name="class-definition"> </a>
+#### Class Definition {:#class-definition}
 
-#### Trait Definition <a name="trait-definition"> </a>
+#### Trait Definition {:#trait-definition}
 
-#### Object Definition <a name="object-definition"> </a>
+#### Object Definition {:#object-definition}
 
-#### Package and Package Object Definitions<a name="package-definition"> </a>
+#### Package and Package Object Definitions{:#package-definition}
 
-#### Import Definition <a name="import-definition"> </a>
+#### Import Definition {:#import-definition}
