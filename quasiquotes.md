@@ -54,7 +54,7 @@ This code runs successfully because there is default `Liftable[Int]` instance th
       def apply(value: T): Tree
     }
 
-### Bring your own <a name="user-defined-liftable"> </a>
+### Bring your own <a name="bring-your-own"> </a>
 
 To define tree representation for your own data type just provide an implicit instance of `Liftable` for it:
 
