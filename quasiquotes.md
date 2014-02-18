@@ -125,26 +125,26 @@ Due to path dependent nature of current reflection API it isn't trivial to share
     import reflect.macros.blackbox.Context
 
     trait LiftableImpls {
-      val univese: Universe
+      val universe: Universe
       import universe._
-      
+
       implicit val liftPoint = Liftable[points.Point] { p =>
         q"_root_.points.Point(${p.x}, ${p.y})"
-      } 
+      }
     }
 
-    object RuntimeLiftableImpls extends { 
-      val universe: reflect.runtime.universe = reflect.runtime.univese
-    } with LiftableImpls 
+    object RuntimeLiftableImpls extends LiftableImpls {
+      val universe: reflect.runtime.universe.type = reflect.runtime.universe
+    }
 
-    trait MacroLiftableImpls extends {
-      val c: Context 
-      val universe: c.universe = c.universe
-    } with LiftableImpls
-    
-    // macro impls defined as a macro bundle
-    class MyMacros(c: Context) with MacroLiftableImpls {
-      // ... 
+    trait MacroLiftableImpls extends LiftableImpls {
+      val c: Context
+      val universe: c.universe.type = c.universe
+    }
+
+    // macro impls defined as a bundle
+    class MyMacro(val c: Context) extends MacroLiftableImpls {
+      // ...
     }
 
 So in practice it's much easier to just define a liftable for given universe at hand:
