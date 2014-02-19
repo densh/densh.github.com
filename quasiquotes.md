@@ -34,6 +34,35 @@ Default pretty printer shows you contents of the tree in imaginary low-level Sca
 
 ## Intro {:#intro}
 
+Quasiquotes are a neat notation that lets you manipulate Scala syntax trees with ease:
+
+    scala> val tree = q"i am { a quasiquote }"
+    tree: universe.Tree = i.am(a.quasiquote)
+
+Every time you wrap a snippet of code into `q"..."` quotation it would become a tree that represents given snippet. As you might have already noticed quotation syntax is in just another usage of extensible string interpolation introduced in 2.10. 
+
+The same syntax can be used to match trees as patterns:
+
+    scala> tree match { case q"i am { a quasiquote }" => "it worked!" }
+    res1: String = it worked!
+
+Whenever you match a tree with a quasiquote it would match whenever a structure of given tree is equivalent to the one you\'ve provided as a pattern.
+
+You can also put things into quasiotation with the help of `$`:
+
+    scala> val aquasiquote = q"a quasiquote"
+    aquasiquote: universe.Select = a.quasiquote
+
+    scala> val tree = q"i am { $aquasiquote }"
+    tree: universe.Tree = i.am(a.quasiquote)
+
+This operation is also known as unquoting. Whenever you unquote an expression of `Tree` type in a quasiquote it will substitute that tree into that location. Most of the time such substitution between quotes is equivalent to textual substitution of the source code.
+
+Similarly one can structurally deconstruct a tree using unquoting in pattern matching:
+
+    scala> val q"i am $what" = q"i am { a quasiquote }"
+    what: universe.Tree = a.quasiquote
+
 ## Interpolators {:#interpolators}
 
     | Used for 
@@ -44,7 +73,7 @@ Default pretty printer shows you contents of the tree in imaginary low-level Sca
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
-## Splicing and cardinality {:#splicing}
+## Splicing {:#splicing}
 
 ## Referential transparency {:#referential-transparency}
 
@@ -58,7 +87,7 @@ Lifting is and extensible way to unquote custom data types in quasiquotes. Its p
     scala> val four = "$two + $two"
     four: universe.Tree = 2.$plus(2)   
 
-This code runs successfully because `Int` is considered to be `Liftable` by default. (see [standard liftables](#standard-liftables)). `Liftable` type is just a trait with a single absract method that defined mapping of given type to tree:
+This code runs successfully because `Int` is considered to be `Liftable` by default. (see [standard liftables](#standard-liftables)). `Liftable` type is just a trait with a single absract method that defines a mapping of given type to tree:
 
     trait Liftable[T] {
       def apply(value: T): Tree
@@ -71,6 +100,10 @@ One can also combine lifting and unquote splicing:
     scala> val ints = List(1, 2, 3)
     scala> val f123 = q"f(..$ints)"
     f123: universe.Tree = f(1, 2, 3)
+
+    scala> val intss = List(List(1, 2, 3), List(4, 5), List(6))
+    scala> val f123456 = q"f(...$intss)"
+    f123456: reflect.runtime.universe.Tree = f(1, 2, 3)(4, 5)(6)
 
 In this case each element of the list will be lifted separately and the result will be spliced into the quote. 
 
@@ -221,6 +254,9 @@ One can also successfully combine unquote splicing and unlifting:
     scala> val q"f(..${ints: List[Int]})" = q"f(1, 2, 3)"
     ints: List[Int] = List(1, 2, 3)
 
+    scala> val q"f(...${intss: List[List[Int]]})" = q"f(1, 2, 3)(4, 5)(6)"
+    intss: List[List[Int]] = List(List(1, 2, 3), List(4, 5), List(6))
+
 Analogously to lifting it would unlift arguments of the function elementwise and wrap the result into a list.
 
 ### Bring your own {:#bring-your-own-unliftable}
@@ -276,25 +312,13 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
-## Terminology summary {:#terminology}
-
-* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
-* **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
-* **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
-* **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
-* **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
-* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
-* **Cardinality** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
-* [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
-* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
-
-## Syntax summary {:#syntax-summary}
+## Syntax overview {:#syntax-overview}
 
 ### Abbreviations {:#abbrev}
 
 * `tname: TermName`
 * `tpname: TypeName`
-* `value: Byte|Short|Int|Long|Float|Double|Boolean|String|Unit`
+* `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
 * `expr: Tree` that contains an expression
 * `tpt: Tree` that contains a type
 * `pat: Tree` that contains a pattern
@@ -1149,6 +1173,18 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 #### Package and Package Object Definitions{:#package-definition}
 
 #### Import Definition {:#import-definition}
+
+## Terminology summary {:#terminology}
+
+* **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
+* **Tree** or **AST** (Abstract Syntax Tree) is representation of Scala program or a part of it through means of Scala reflection API's Tree type.
+* **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
+* **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
+* **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
+* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
+* **Rank** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
+* [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
+* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
 
 ## Future prospects
 
