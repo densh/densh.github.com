@@ -8,11 +8,31 @@ layout: page
 * Table of contents.
 {:toc}
 
-## Intro {:#intro} 
+## Before you start {:#before-you-start} 
 
-All examples in this guide are run in the repl with one extra line:
+Before you start reading this guide it's recommended to start a Scala REPL with one extra line:
 
     val universe = reflect.runtime.universe; import universe._
+
+REPL is the best place to explore quasiquotes and this guide will use extensively to demonstrate handling of trees.
+
+Another tool you might want to be aware of is new and shiny `showCode` pretty printer:
+
+    scala> val C = q"class C"
+    C: reflect.runtime.universe.ClassDef =
+    class C extends scala.AnyRef {
+      def <init>() = {
+        super.<init>();
+        ()
+      }
+    }
+
+    scala> showCode(C)
+    res11: String = class C
+
+Default pretty printer shows you contents of the tree in imaginary low-level Scala-like notation. `showCode` on the other hand will do its best to reconstruct actual source code equivalent to given tree.
+
+## Intro {:#intro}
 
 ## Interpolators {:#interpolators}
 
@@ -468,7 +488,6 @@ Similarly you can create and extract member selections:
 
     scala> val q"foo.${name: TermName}" = q"foo.bar"
     name: universe.TermName = bar
-
 
 #### Super and This {:#super-this}
 
