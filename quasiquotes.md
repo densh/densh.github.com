@@ -43,8 +43,8 @@ Every time you wrap a snippet of code into `q"..."` quotation it would become a 
 
 The same syntax can be used to match trees as patterns:
 
-    scala> tree match { case q"i am { a quasiquote }" => "it worked!" }
-    res1: String = it worked!
+    scala> println(tree match { case q"i am { a quasiquote }" => "it worked!" })
+    it worked!
 
 Whenever you match a tree with a quasiquote it would match whenever a structure of given tree is equivalent to the one you\'ve provided as a pattern.
 
@@ -65,13 +65,45 @@ Similarly one can structurally deconstruct a tree using unquoting in pattern mat
 
 ## Interpolators {:#interpolators}
 
+Scala is the language with rich syntax that differs greatly depending on the syntactical context:
+
+    scala> val x = q"""
+             val x: List[Int] = List(1, 2) match { 
+               case List(a, b) => List(a + b)
+             }
+           """
+    x: universe.ValDef =
+    val x: List[Int] = List(1, 2) match {
+      case List((a @ _), (b @ _)) => List(a.$plus(b))
+    }
+
+In this example we see three primary contexts being used:
+
+1. `List(1, 2)` and `List(a + b)` are expressions
+2. `List[Int]` is a type
+3. `List(a, b)` is a pattern
+
+Each of this contexts is covered by separate interpolator:
+
     | Used for 
 ----|----------------------------------------------------------------
  q  | [expressions](#exprs-summary) and [definitions](#defns-summary)
  tq | [types](#types-summary)
  pq | [patterns](#pats-summary)
+
+It's extremely import to use correct interpolator when you work with trees. Syntactical similiary between different contexts doesn\'t imply similarity between underlying trees:
+
+    scala> println(q"List[Int]" equalsStructure tq"List[Int]")
+    false
+
+Additionally there are two auxilary interpolators that let you work with minor areas of scala syntax:
+
+    | Used for
+----|-------------------------------------
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
+
+See corresponding [Syntax overview](#syntax-overview) for details.
 
 ## Splicing {:#splicing}
 
@@ -93,7 +125,9 @@ This code runs successfully because `Int` is considered to be `Liftable` by defa
       def apply(value: T): Tree
     }
 
-Whenever there is implicit value of `Liftable[T]` is available one can unquote `T` in quasiquote. A number of data types are supported natively and will never triger usage of `Liftable` representation even if it\'s available: subtypes of `Tree`, `Symbol`, `Name`, `Modifiers` and `FlagSet`. (see [type classes as objects and implicits](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf))
+Whenever there is implicit value of `Liftable[T]` is available one can unquote `T` in quasiquote. This design pattern is known as a type class. You can read more about it in ["Type Classes as Objects and Implicits"](http://ropas.snu.ac.kr/~bruno/papers/TypeClasses.pdf).
+
+A number of data types that are supported natively by quasiquotes will never triger usage of `Liftable` representation even if it\'s available: subtypes of `Tree`, `Symbol`, `Name`, `Modifiers` and `FlagSet`.
 
 One can also combine lifting and unquote splicing:
 
@@ -448,15 +482,15 @@ Scala has a number of default built-in literals:
     q"()"               // unit literal
 
 All of those values have Literal type except symbols which have different representation:
-    
-    scala> q"'symbol"
-    res12: universe.Tree = scala.Symbol("symbol")
+
+    scala> val foo = q"'foo"
+    foo: universe.Tree = scala.Symbol("foo")
 
 Thanks to [lifting](#lifting) you can also easily create literal trees directly from values of corresponding types:
 
     scala> val x = 1
-    scala> q"$x"
-    res13: universe.Tree = 1
+    scala> val one = q"$x"
+    one: universe.Tree = 1
 
 This would work the same way for all literal types (see [standard liftables](#standard-liftables) except `Null`. Lifting of `null` value and `Null` type isn't supported, use `q"null"` if you really mean to create null literal:
 
@@ -480,11 +514,13 @@ Identifiers and member selections are two fundamental primitives that let you re
 Each term identifier is defined by its name and by the fact of being backquoted or not:
 
     scala> val name = TermName("Foo")
-    scala> q"$name"
-    res13: universe.Ident = Foo
+    name: universe.TermName = Foo
 
-    scala> q"`$name`"
-    res14: universe.Ident = `Foo`
+    scala> val foo = q"$name"
+    foo: universe.Ident = Foo
+
+    scala> val backquoted = q"`$name`"
+    backquoted: universe.Ident = `Foo`
 
 Although backquoted and non-backquoted identifiers may refer to the same things they are not equivalent from synactical point of view:
 
@@ -504,13 +540,13 @@ Similarly you can create and extract member selections:
     scala> val member = TermName("bar")
     member: universe.TermName = bar
 
-    scala> q"foo.$member"
-    res17: universe.Select = foo.bar
+    scala> val selected = q"foo.$member"
+    selected: universe.Select = foo.bar
 
-    scala> val q"foo.$name" = q"foo.bar"
+    scala> val q"foo.$name" = selected
     name: universe.Name = bar
 
-    scala> val q"foo.${name: TermName}" = q"foo.bar"
+    scala> val q"foo.${name: TermName}" = selected
     name: universe.TermName = bar
 
 #### Super and This {:#super-this}
@@ -671,8 +707,8 @@ Blocks can also be flattened into another blocks with `..$`:
       b
     }
 
-    scala> q"..$ab; c"
-    res0: universe.Tree =
+    scala> val abc = q"..$ab; c"
+    abc: universe.Tree =
     {
       a;
       b;
@@ -797,8 +833,8 @@ its type inferred you need to use [empty type](#empty-type):
     scala> val param = q"val x: $tpt"
     param: universe.ValDef = val x
 
-    scala> q"($param => x)"
-    res30: universe.Function = ((x) => x)
+    scala> val fun = q"($param => x)"
+    fun: universe.Function = ((x) => x)
 
 All of the given forms are represented in the same way and could be uniformly matched upon:
 
@@ -928,8 +964,8 @@ Similarly to [term identifiers](#term-ref) one can construct a type identifier b
     scala> val name = TypeName("Foo")
     name: universe.TypeName = Foo
 
-    scala> tq"$name"
-    res25: universe.Ident = Foo
+    scala> val foo = tq"$name"
+    foo: universe.Ident = Foo
 
 And deconstruct it back through [unlifting](#unlifting):
 
@@ -959,13 +995,13 @@ Type projection is fundamental way to select types as members of other types:
 
 As a convenience one can also select type members of terms:
 
-    scala> tq"scala.Int"
-    res32: universe.Select = scala.Int
+    scala> val int = tq"scala.Int"
+    int: universe.Select = scala.Int
 
 But semantically such selections are just a shortcut for a combination of singleton types and type projections:
 
-    scala> tq"scala.type#Int"
-    res33: universe.SelectFromTypeTree = scala.type#Int
+    scala> val projected = tq"scala.type#Int"
+    projected: universe.SelectFromTypeTree = scala.type#Int
 
 Lastly [similarly to expressions](#super-this) one can select members through super and this:
 
