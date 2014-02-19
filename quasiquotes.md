@@ -91,7 +91,7 @@ Each of this contexts is covered by separate interpolator:
  tq | [types](#types-summary)
  pq | [patterns](#pats-summary)
 
-It's extremely import to use correct interpolator when you work with trees. Syntactical similiary between different contexts doesn\'t imply similarity between underlying trees:
+It's extremely important to use correct interpolator when you work with trees. Syntactical similiarity between different contexts doesn\'t imply similarity between underlying trees:
 
     scala> println(q"List[Int]" equalsStructure tq"List[Int]")
     false
