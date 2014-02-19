@@ -14,12 +14,12 @@ Before you start reading this guide it's recommended to start a Scala REPL with 
 
     val universe = reflect.runtime.universe; import universe._
 
-REPL is the best place to explore quasiquotes and this guide will use extensively to demonstrate handling of trees.
+REPL is the best place to explore quasiquotes and this guide will use extensively to demonstrate handling of trees. All of the examples will assume that import.
 
-Another tool you might want to be aware of is new and shiny `showCode` pretty printer:
+Another tool you might want to be aware of is new and shiny `showCode` pretty printer (contributed by [@VladimirNik](https://github.com/VladimirNik)):
 
     scala> val C = q"class C"
-    C: reflect.runtime.universe.ClassDef =
+    C: universe.ClassDef =
     class C extends scala.AnyRef {
       def <init>() = {
         super.<init>();
@@ -27,10 +27,10 @@ Another tool you might want to be aware of is new and shiny `showCode` pretty pr
       }
     }
 
-    scala> showCode(C)
-    res11: String = class C
+    scala> println(showCode(C))
+    class C
 
-Default pretty printer shows you contents of the tree in imaginary low-level Scala-like notation. `showCode` on the other hand will do its best to reconstruct actual source code equivalent to given tree.
+Default pretty printer shows you contents of the tree in imaginary low-level Scala-like notation. `showCode` on the other hand will do its best to reconstruct actual source code equivalent to the given tree in proper Scala syntax.
 
 ## Intro {:#intro}
 
