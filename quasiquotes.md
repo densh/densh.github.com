@@ -32,6 +32,11 @@ Another tool you might want to be aware of is new and shiny `showCode` pretty pr
 
 Default pretty printer shows you contents of the tree in imaginary low-level Scala-like notation. `showCode` on the other hand will do its best to reconstruct actual source code equivalent to the given tree in proper Scala syntax.
 
+On the other side of spectrum there is also a `showRaw` pretty printer that shows direct internal organization of the tree:
+
+    scala> println(showRaw(q"class C"))
+    ClassDef(Modifiers(), TypeName("C"), List(), Template(List(Select(Ident(scala), TypeName("AnyRef"))), noSelfType, List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))
+
 ## Intro {:#intro}
 
 Quasiquotes are a neat notation that lets you manipulate Scala syntax trees with ease:
@@ -91,10 +96,25 @@ Each of this contexts is covered by separate interpolator:
  tq | [types](#types-summary)
  pq | [patterns](#pats-summary)
 
-It's extremely important to use correct interpolator when you work with trees. Syntactical similiarity between different contexts doesn\'t imply similarity between underlying trees:
+Syntactical similiarity between different contexts doesn\'t imply similarity between underlying trees:
 
     scala> println(q"List[Int]" equalsStructure tq"List[Int]")
     false
+
+If we peek under the hood we'll see that trees are indeed different:
+
+    scala> println(showRaw(q"List[Int]"))
+    TypeApply(Ident(TermName("List")), List(Ident(TypeName("Int"))))
+
+    scala> println(showRaw(tq"List[Int]"))
+    AppliedTypeTree(Ident(TypeName("List")), List(Ident(TypeName("Int"))))
+
+Similarly patterns and expressions are not equivalent either:
+
+    scala> println(pq"List(a, b)" equalsStructure q"List(a, b)")
+    false
+
+So it's extremely important to use the right interpotor for the job to construct a valid syntax tree.
 
 Additionally there are two auxilary interpolators that let you work with minor areas of scala syntax:
 
@@ -103,9 +123,11 @@ Additionally there are two auxilary interpolators that let you work with minor a
  cq | [case clause](#aux-summary)
  fq | [for loop enumerator](#aux-summary)
 
-See corresponding [Syntax overview](#syntax-overview) for details.
+See [syntax overview](#syntax-overview) section for details.
 
 ## Splicing {:#splicing}
+
+
 
 ## Referential transparency {:#referential-transparency}
 
@@ -119,7 +141,7 @@ Lifting is and extensible way to unquote custom data types in quasiquotes. Its p
     scala> val four = "$two + $two"
     four: universe.Tree = 2.$plus(2)   
 
-This code runs successfully because `Int` is considered to be `Liftable` by default. (see [standard liftables](#standard-liftables)). `Liftable` type is just a trait with a single absract method that defines a mapping of given type to tree:
+This code runs successfully because `Int` is considered to be `Liftable` by default. `Liftable` type is just a trait with a single absract method that defines a mapping of given type to tree:
 
     trait Liftable[T] {
       def apply(value: T): Tree
@@ -139,7 +161,7 @@ One can also combine lifting and unquote splicing:
     scala> val f123456 = q"f(...$intss)"
     f123456: reflect.runtime.universe.Tree = f(1, 2, 3)(4, 5)(6)
 
-In this case each element of the list will be lifted separately and the result will be spliced into the quote. 
+In this case each element of the list will be lifted separately and the result will be spliced right in. 
 
 ### Bring your own {:#bring-your-own-liftable}
 
@@ -496,7 +518,7 @@ This would work the same way for all literal types (see [standard liftables](#st
 
     scala> val x = null
     scala> q"$x"
-    <console>:31: error: Can't splice Null, bottom type values often indicate programmer mistake
+    <console>:31: error: Can't unquote Null, bottom type values often indicate programmer mistake
                   q"$x"
                      ^
 
@@ -540,14 +562,10 @@ Similarly you can create and extract member selections:
     scala> val member = TermName("bar")
     member: universe.TermName = bar
 
-    scala> val selected = q"foo.$member"
-    selected: universe.Select = foo.bar
-
-    scala> val q"foo.$name" = selected
-    name: universe.Name = bar
-
     scala> val q"foo.${name: TermName}" = selected
     name: universe.TermName = bar
+
+Although it is possible to just match non-ascribed names in identifiers and selections it's discouraged as behaviour of such matches might change in the future.
 
 #### Super and This {:#super-this}
 
@@ -972,6 +990,8 @@ And deconstruct it back through [unlifting](#unlifting):
     scala> val tq"${name: TypeName}" = tq"Foo"
     name: universe.TypeName = Foo
 
+It's recommended to always ascribe name as `TypeName` when you work with type identifiers. Non-ascribed matching behavour may change in the future.
+
 #### Singleton Type {:#singleton-type}
 
 A singleton type is a way to express a type of a term definition that is being referenced:
@@ -993,10 +1013,17 @@ Type projection is fundamental way to select types as members of other types:
     foo: universe.Tree = Foo
     bar: universe.TypeName = Bar
 
+Similarly to identifiers it's recommended to always ascribe name as `TypeName`. Non-ascribed matching behaviour might change in the future.
+
 As a convenience one can also select type members of terms:
 
     scala> val int = tq"scala.Int"
     int: universe.Select = scala.Int
+
+    scala> val tq"scala.${name: TypeName}" = int
+    name: universe.TypeName = Int
+
+Similarly to identifiers it's recommended to always ascribe name as `TypeName`. Non-ascribed matching behaviour might change in the future.
 
 But semantically such selections are just a shortcut for a combination of singleton types and type projections:
 
@@ -1152,14 +1179,9 @@ Another important thing to mention is a type variable patterns:
 One can construct (and similarly deconstruct) such patterns by following steps:
 
     scala> val name = TypeName("t")
-    name: universe.TypeName = t
-
-    scala> val t = pq"$name"
-    t: universe.Bind = (t @ _)
-
+    scala> val empty = q""
+    scala> val t = pq"$name @ $empty"
     scala> val tpt = tq"F[$t]"
-    tpt: universe.Tree = F[(t @ _)]
-
     scala> val typevar = pq"_: $tpt"
     typevar: universe.Typed = (_: F[(t @ _)])
 
@@ -1217,8 +1239,8 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 * **Tree construction** refers to usages of quasiquotes as expressions to represent creation of new tree values.
 * **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
 * **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
-* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the splicee into a tree. Can be performed with either `..$` or `...$` syntax.
-* **Rank** is a degree of flattenning of unquotee: `cardinality($) == 0`, `cardinality(..$) == 1`, `cardinality(...$) == 2`. 
+* **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the unquotee into a tree. Can be performed with either `..$` or `...$` syntax.
+* **Rank** is a degree of flattenning of unquotee: `rank($) == 0`, `rank(..$) == 1`, `rank(...$) == 2`. 
 * [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
 * [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
 
