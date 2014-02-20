@@ -127,7 +127,7 @@ See [syntax overview](#syntax-overview) section for details.
 
 ## Splicing {:#splicing}
 
-Unquote splicing is a way to unquote a variable number of elements into a tree:
+Unquote splicing is a way to unquote a variable number of elements:
 
     scala> val ab = List(q"a", q"b")
     scala> val fab = q"f(..$ab)"
