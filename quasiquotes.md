@@ -14,7 +14,7 @@ Before you start reading this guide it's recommended to start a Scala REPL with 
 
     val universe = reflect.runtime.universe; import universe._
 
-REPL is the best place to explore quasiquotes and this guide will use extensively to demonstrate handling of trees. All of the examples will assume that import.
+REPL is the best place to explore quasiquotes and this guide will use it extensively to demonstrate handling of trees. All of the examples will assume that import.
 
 Another tool you might want to be aware of is new and shiny `showCode` pretty printer (contributed by [@VladimirNik](https://github.com/VladimirNik)):
 
@@ -127,7 +127,57 @@ See [syntax overview](#syntax-overview) section for details.
 
 ## Splicing {:#splicing}
 
+Unquote splicing is a way to unquote a variable number of elements into a tree:
 
+    scala> val ab = List(q"a", q"b")
+    scala> val fab = q"f(..$ab)"
+    fxs: universe.Tree = f(a, b)
+
+Dots near unquotee annotate degree of flattenning and are also called splicing rank. `..$` expects argument to be an `Iterable[Tree]` and `...$` expects `Iterable[Iterable[Tree]]`. 
+
+Splicing can be easily combined with regular unquotation:
+
+    scala> val c = q"c"
+    scala> val fabc = q"f(..$ab, $c)"
+    fabc: universe.Tree = f(a, b, c)
+
+    scala> val fcab = q"f($c, ..$ab)"
+    fcab: universe.Tree = f(c, a, b)
+
+    scala> val fabcab = q"f(..$ab, $c, ..$ab)"
+    fabcab: universe.Tree = f(a, b, c, a, b)
+
+If you want to abstract over applications even further you can use `..$`:
+
+    scala> val arglists = List(ab, List(c))
+    arglists: List[List[universe.Ident]] = List(List(a, b), List(c))
+
+    scala> q"f(...$arglists)"
+    res11: universe.Tree = f(a, b)(c)
+
+At the momeent `...$` splicing is only supported for function applications and parameter lists in def and class definitions.
+
+Similarly to construction one can also use `..$` and `...$` to tear trees apart:
+
+    scala> val q"f(..$args)" = q"f(a, b)"
+    args: List[universe.Tree] = List(a, b)
+
+    scala> val q"f(...$args)" = q"f(a, b)(c)"
+    args: List[List[universe.Tree]] = List(List(a, b), List(c))
+
+Although there are some limitations to the way to you can combine it with regular `$` variable extraction:
+
+    case q"f($first, ..$rest)" => // ok
+    case q"f(..$init, $last)"  => // ok
+    case q"f(..$a, ..$b)"      => // not allowed
+
+So in general only one `..$` is allowed per given list. Similar restrictions also apply to `...$`:
+
+    case q"f(..$first)(...$rest)" => // ok
+    case q"f(...$init)(..$first)" => // ok
+    case q"f(...$a)(...$b)"       => // not allowed
+
+In this section we only worked with function arguments but the same splicing rules are true for all syntax forms with variable amount of elements. [Syntax overview](#syntax-overview) and corresponding [syntax details](#syntax-details) sections demonstrate how you can splice into other syntactic forms.
 
 ## Referential transparency {:#referential-transparency}
 
