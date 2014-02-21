@@ -240,7 +240,7 @@ into a case class constructor call. In this example there two important points t
    compatible with the others. This problem is caused by path-dependant nature of current reflection
    api. (see [sharing liftable implementation between universes](#reusing-liftable-impl))
 
-2. Due to lack of [referential transparency](#referential-transperancy), reference to point companion
+2. Due to lack of [referential transparency](#referential-transparency), reference to point companion
    has to be fully qualified to ensure correctness in of this tree in every possible context. Another
    way to workaround reference issue is to use symbols to refer to things:
 
@@ -1296,6 +1296,6 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 
 ## Future prospects
 
-* Referential transperancy: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
+* Referential transparency: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
 * Alternative to Scheme's ellipsis: [SI-8164](https://issues.scala-lang.org/browse/SI-8164)
 * Safety by construction 
