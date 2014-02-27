@@ -502,11 +502,11 @@ Here one needs to pay attention to a few nuances:
 
                                        | Quasiquote                                                                                                         | Type 
 ---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
- [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  [Var](#val-var-definition)            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  [Val Pattern](#val-var-definition)    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
  [Var Pattern](#val-var-definition)    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
+ [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  [Type](#type-definition)              | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
  [Class](#class-definition)            | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  [Trait](#trait-definition)            | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
@@ -1015,6 +1015,14 @@ It's important to mention that For and For-Yield do not cross-match each other:
 
 #### New {:#new}
 
+New expression lets you construct an instance of given type possibly refining it with other types or definitions:
+
+    scala> val q"new ..$parents { ..$body }" = q"new Foo(1) with Bar { def baz = 2 }"
+    parents: List[universe.Tree] = List(Foo(1), Bar)
+    body: List[universe.Tree] = List(def baz = 2)
+
+See [templates](#templates) section for details. 
+
 ### Types
 
 #### Empty Type {:#empty-type}
@@ -1314,7 +1322,7 @@ Considering the fact that definitions might contain various low-level flags adde
 
     scala> val q"$_ def f" = q"@foo @bar implicit def f"
 
-#### Templates {:#template}
+#### Templates {:#templates}
 
 Templates are a common abstraction in definition trees that is used in new expressions, classes, traits, objects, package objects. Although there is no interpolator for it at the moment we can illustrate its structure on the example of new expression (similar handling will applly to all other template-bearing trees):
 
@@ -1355,9 +1363,11 @@ So template consists of:
         scala> val q"new { ..$body }" = q"new { val x = 1; def y = 'y }"
         body: List[universe.Tree] = List(val x = 1, def y = scala.Symbol("y"))
 
-#### Def Definition {:#def-definition}
-
 #### Val and Var Definitions {:#val-var-definition}
+
+Vals and vars allow you to define immutable and mutable variables correspondingly.
+
+#### Def Definition {:#def-definition}
 
 #### Type Definition {:#type-definition}
 
