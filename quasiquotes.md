@@ -1264,7 +1264,96 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 
 #### Modifiers {:#modifiers}
 
+Every definition except imports and package objects have associtated modifiers object which contains following data:
+
+1. `FlagSet`, a set of bits that charactarizes given definition.
+2. Private within name (e.g. `foo` in `private[foo] def f`)
+3. List of annotations
+
+Quasiquotes let you easily work with those fields through native support for `Modifiers`, `FlagSet` and annotation unquoting.
+
+    scala> val f1 = q"${Modifiers(PRIVATE | IMPLICIT)} def f"
+    f1: universe.DefDef = implicit private def f: scala.Unit
+
+    scala> val f2 = q"$PRIVATE $IMPLICIT def f"
+    f2: universe.DefDef = implicit private def f: scala.Unit
+
+    scala> val f3 = q"private implicit def f"
+    f3: universe.DefDef = implicit private def f: scala.Unit
+
+All of those quasiquotes result into equivalent trees. It's also possible to combine unquoted flags with one provided inline in the source code but unquoted one should be given earlier:
+
+    scala> q"$PRIVATE implicit def foo"
+    res10: universe.DefDef = implicit private def foo: scala.Unit
+
+    scala> q"implicit $PRIVATE def foo"
+    <console>:32: error: expected start of definition
+                  q"implicit $PRIVATE def foo"
+                             ^
+
+To provide an annotation one need to unquote a new-shaped tree:
+
+    scala> val annot = q"new foo(1)"
+    Foo: universe.Tree = new Foo(1)
+
+    scala> val f4 = q"@$annot def f"
+    res9: universe.DefDef = @new foo(1) def f: scala.Unit
+
+    scala> val f5 = q"@foo(1) def f"
+    res8: universe.DefDef = @new foo(1) def f: scala.Unit
+
+In deconstruction one can either extract `Modifiers` or annotations, but you can't extract flags separatly:
+
+    scala> val q"$mods def f" = q"@foo implicit def f"
+    mods: universe.Modifiers = Modifiers(<deferred> implicit, , Map())
+
+    scala> val q"@..$annots implicit def f" = q"@foo @bar implicit def f"
+    annots: List[universe.Tree] = List(new foo(), new bar())
+
+Considering the fact that definitions might contain various low-level flags added to trees during typechecking it\'s recommended to always extract complete modifiers as otherwise your pattern might not be exhaustive. If you don't care about them just use a wildcard there:
+
+    scala> val q"$_ def f" = q"@foo @bar implicit def f"
+
 #### Templates {:#template}
+
+Templates are a common abstraction in definition trees that is used in new expressions, classes, traits, objects, package objects. Although there is no interpolator for it at the moment we can illustrate its structure on the example of new expression (similar handling will applly to all other template-bearing trees):
+
+    q"new { ..$early } with ..$parents { $self => ..$stats }"
+
+So template consists of:
+
+1. Early definitions. A list of val or type definitions. Type definitions are still allowed by they are deprecated and will be removed in the future:
+
+        scala> val withx = q"new { val x = 1 } with RequiresX"
+        withx: universe.Tree = ...
+
+        scala> val q"new { ..$early } with RequiresX" = withx
+        early: List[universe.Tree] = List(val x = 1)
+ 
+2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
+
+        scala> val q"new $first[..$targs](...$argss) with ..$rest"  = q"new Foo(1) with Bar[T]"
+        first: universe.Tree = Foo
+        targs: List[universe.Tree] = List()
+        argss: List[List[universe.Tree]] = List(List(1))
+        rest: List[universe.Tree] = List(Bar[T])
+
+        scala> val List(tq"Bar[T]") = rest
+
+3. Self type definition. A val definition that can be used to define an alias to this and provide a self-type via tpt:
+
+        scala> val q"new { $self => }" = q"new { self: T => }"
+        self: universe.ValDef = private val self: T = _
+
+        scala> val q"$mods val $name: $tpt" = self
+        mods: universe.Modifiers = Modifiers(private, , Map())
+        name: universe.TermName = self
+        tpt: universe.Tree = T
+
+4. List of body statements.
+
+        scala> val q"new { ..$body }" = q"new { val x = 1; def y = 'y }"
+        body: List[universe.Tree] = List(val x = 1, def y = scala.Symbol("y"))
 
 #### Def Definition {:#def-definition}
 
