@@ -798,14 +798,15 @@ Due to automatic flattening of single-element blocks with expressions, expressio
     scala> val q"..$stats" = q"foo"
     stats: List[universe.Tree] = List(foo)
 
-Empty tree is considered to be a zero-element block:
+Except for empty tree which is not considered to be a block:
 
     scala> val q"..$stats" = q""
-    stats: List[universe.Tree] = List()
+    scala.MatchError: <empty> (of class scala.reflect.internal.Trees$EmptyTree$)
+      ... 32 elided
 
 #### If {:#if}
 
-There are two variaties of if expressions: those with else clause and without it:
+There are two varieties of if expressions: those with else clause and without it:
 
     scala> val q"if ($cond) $thenp else $elsep" = q"if (true) a else b"
     cond: universe.Tree = true
