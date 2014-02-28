@@ -44,16 +44,19 @@ Quasiquotes are a neat notation that lets you manipulate Scala syntax trees with
     scala> val tree = q"i am { a quasiquote }"
     tree: universe.Tree = i.am(a.quasiquote)
 
-Every time you wrap a snippet of code into `q"..."` quotation it would become a tree that represents given snippet. As you might have already noticed quotation syntax is in just another usage of extensible string interpolation introduced in 2.10. 
+Every time you wrap a snippet of code into `q"..."` quotation it would become a tree that represents given snippet. As you might have already noticed quotation syntax is in just another usage of extensible string interpolation introduced in 2.10. Although they look like strings they operate on syntactic trees under the hood. 
 
 The same syntax can be used to match trees as patterns:
 
     scala> println(tree match { case q"i am { a quasiquote }" => "it worked!" })
     it worked!
 
-Whenever you match a tree with a quasiquote it would match whenever a structure of given tree is equivalent to the one you\'ve provided as a pattern.
+Whenever you match a tree with a quasiquote it would match whenever a *structure* of given tree is equivalent to the one you\'ve provided as a pattern. You can check for structural equality manually with the help of `equalsStructure` method:
 
-You can also put things into quasiotation with the help of `$`:
+    scala> println(q"foo + bar" equalsStructure q"foo.+(bar)")
+    true
+
+You can also put things into quasiquotation with the help of `$`:
 
     scala> val aquasiquote = q"a quasiquote"
     aquasiquote: universe.Select = a.quasiquote
@@ -61,7 +64,7 @@ You can also put things into quasiotation with the help of `$`:
     scala> val tree = q"i am { $aquasiquote }"
     tree: universe.Tree = i.am(a.quasiquote)
 
-This operation is also known as unquoting. Whenever you unquote an expression of `Tree` type in a quasiquote it will substitute that tree into that location. Most of the time such substitution between quotes is equivalent to textual substitution of the source code.
+This operation is also known as unquoting. Whenever you unquote an expression of `Tree` type in a quasiquote it will *structurally substitute* that tree into that location. Most of the time such substitution between quotes is equivalent to textual substitution of the source code.
 
 Similarly one can structurally deconstruct a tree using unquoting in pattern matching:
 
