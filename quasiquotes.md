@@ -1468,6 +1468,26 @@ Generic form of pattern definition consists of modifiers, pattern, ascribed type
 
 #### Import Definition {:#import-definition}
 
+Import trees consist of reference and a list of selectors:
+
+    scala> val q"import $ref.{..$sels}" = q"import foo.{bar, baz => boo, poision => _, _}"
+    ref: universe.Tree = foo
+    sels: List[universe.Tree] = List((bar @ _), $minus$greater((baz @ _), (boo @ _)), $minus$greater((poision @ _), _), _)
+
+Selectors are extracted as pattern trees which are syntactically similar to selectors:
+
+1. Simple identifier selectors are represented as pattern bindings: `pq"bar"`
+2. Renaming selectors are represented as thin arrow patterns: `pq"baz -> boo"`
+3. Unimport selectors are represented as thin arrows with wildcard right hand side: `pq"poision -> _"`
+4. Wildcard selector is represented as wildcard pattern: `pq"_"`
+
+Similarly one construct imports back from a programmatically created list of selectors:
+
+    scala> val ref = q"a.b"
+    scala> val sels = List(pq"foo -> _", pq"_")
+    scala> q"import $ref.{..$sels}"
+    res11: universe.Import = import a.b.{foo=>_, _}
+
 ## Terminology summary {:#terminology}
 
 * **Quasiquote** (not quasi-quote) can refer to either quasiquote library or any usage of one it's [interpolators](#interpolators). The name is not hyphenated for sake of consistency with implementations of the same concept in other languages (e.g. [Scheme and Racket](http://docs.racket-lang.org/reference/quasiquote.html), [Haskell](http://www.haskell.org/haskellwiki/Quasiquotation))
