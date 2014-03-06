@@ -503,20 +503,20 @@ Here one needs to pay attention to a few nuances:
  
 ### Definitions {:#defns-summary}
 
-                                       | Quasiquote                                                                                                         | Type 
----------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
- [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Var](#val-var-definition)            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Val Pattern](#pattern-definition)    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
- [Var Pattern](#pattern-definition)    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
- [Method](#method-definition)          | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
- [Type](#type-definition)              | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
- [Class](#class-definition)            | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
- [Trait](#trait-definition)            | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
- [Object](#object-definition)          | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
- [Package](#package-definition)        | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
- [Package Object](#package-definition) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
- [Import](#import-definition)          | `q"import $ref.{..$sels}"`                                                                                         | Import
+                                   | Quasiquote                                                                                                         | Type 
+-----------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
+ [Val](#val-var)                    | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Var](#val-var)                    | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
+ [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
+ [Method](#method)                 | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
+ [Type](#type-def)                 | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
+ [Class](#class)                   | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
+ [Trait](#trait)                   | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
+ [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
+ [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
+ [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
+ [Import](#import)                 | `q"import $ref.{..$sels}"`                                                                                         | Import
 
 ### Auxiliary {:#aux-summary}
 
@@ -896,7 +896,7 @@ on type inference to infer its type. Last one explicitly defines function parame
 to implementation restriction second notation can only be used in parenthesis or inside other
 expression. If you leave them out you have to specify parameter types.
 
-Parameters are represented as [Vals](#val-var-definition). If you want to programmatically create val that should have 
+Parameters are represented as [Vals](#val-var). If you want to programmatically create val that should have 
 its type inferred you need to use [empty type](#empty-type):
 
     scala> val tpt = tq""
@@ -1033,8 +1033,8 @@ See [templates](#templates) section for details.
 
 Empty type (`tq""`) is a canonical way to say that type at given location isn't given by the user and should be inferred by the compiler:
 
-1. [Def](#method-definition) with unknown return type
-2. [Val or Var](#val-var-definition) with unknown type
+1. [Def](#method) with unknown return type
+2. [Val or Var](#val-var) with unknown type
 3. [Anonymous function](#function-expr) with unknown argument type
 
 #### Type Identifier {:#type-ident}
@@ -1367,9 +1367,9 @@ So template consists of:
         scala> val q"new { ..$body }" = q"new { val x = 1; def y = 'y }"
         body: List[universe.Tree] = List(val x = 1, def y = scala.Symbol("y"))
 
-#### Val and Var Definitions {:#val-var-definition}
+#### Val and Var Definitions {:#val-var}
 
-Vals and vars allow you to define immutable and mutable variables correspondingly. Additionally they are also used to represent [function](#function-expr), [class](#class-definition) and [method](#method-definition) paremeters.
+Vals and vars allow you to define immutable and mutable variables correspondingly. Additionally they are also used to represent [function](#function-expr), [class](#class) and [method](#method) paremeters.
 
 Each val and var consistents of four components: modifiers, name, type tree and a right hand side:
 
@@ -1398,7 +1398,7 @@ Vars always have MUTABLE flag in their modifiers:
     tpt: universe.Tree = <type ?>
     rhs: universe.Tree = 2
 
-#### Pattern Definition {:#pattern-definition}
+#### Pattern Definitions {:#pattern-def}
 
 Pattern definitions allow to use scala pattern matching capabilities to define variables. Unlike
 val and var definitions, pattern definitions are not first-class and they are get represented 
@@ -1454,19 +1454,25 @@ Generic form of pattern definition consists of modifiers, pattern, ascribed type
 
     q"$mods val $pat: $tpt = $rhs"
 
-#### Method Definition {:#method-definition}
+Simiarly one can also make a mutable pattern definition:
 
-#### Type Definition {:#type-definition}
+    q"$mods var $pat: $tpt = $rhs"
 
-#### Class Definition {:#class-definition}
+#### Method Definition {:#method}
 
-#### Trait Definition {:#trait-definition}
+#### Type Definition {:#type-def}
 
-#### Object Definition {:#object-definition}
+#### Class Definition {:#class}
 
-#### Package and Package Object Definitions{:#package-definition}
+#### Trait Definition {:#trait}
 
-#### Import Definition {:#import-definition}
+#### Object Definition {:#object}
+
+#### Package Definitions{:#package}
+
+#### Package Object Definition{:#package-object}
+
+#### Import Definition {:#import}
 
 Import trees consist of reference and a list of selectors:
 
