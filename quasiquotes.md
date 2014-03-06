@@ -806,6 +806,16 @@ Except for empty tree which is not considered to be a block:
     scala.MatchError: <empty> (of class scala.reflect.internal.Trees$EmptyTree$)
       ... 32 elided
 
+Zero-element block is equivalent to synthetic unit (one that was inserted by the compiler rather than written by the user): 
+
+    scala> val q"..$stats" = q"{}"
+    stats: List[universe.Tree] = List()
+
+    scala> val syntheticUnit = q"..$stats"
+    syntheticUnit: universe.Tree = ()
+
+Such units are used in empty else branches of [ifs](#if) and empty bodies of [case clauses](#match) making it convenient to work with those cases as with zero-element blocks.
+
 #### If {:#if}
 
 There are two varieties of if expressions: those with else clause and without it:
@@ -820,7 +830,7 @@ There are two varieties of if expressions: those with else clause and without it
     thenp: universe.Tree = a
     elsep: universe.Tree = ()
 
-No-else clause is equivalent to else clause that contains a unit literal. 
+No-else clause is equivalent to else clause that contains a synthetic unit literal ([empty block](#block)). 
 
 #### Pattern Match {:#match}
 
@@ -828,7 +838,7 @@ Pattern matching is cornerstone feature of Scala that lets you deconstruct value
     
     q"$expr match { case ..$cases } "
 
-Where each case is represented with a `cq"..."` quote:
+Where `expr` is some non-empty expression and each case is represented with a `cq"..."` quote:
 
     cq"$pat if $expr => $expr" 
 
@@ -845,7 +855,7 @@ Combination of the two forms allows to construct and deconstruct arbitrary patte
     pat2: universe.Tree = _
     body2: universe.Tree = scala.Symbol("notfoo")
 
-Case clause without body is equivalent to one holding unit literal:
+Case clause without body is equivalent to one holding synthetic unit literal ([empty block](#block)):
 
     scala> val cq"$pat if $expr1 => $expr2" = cq"_ =>"
     pat: universe.Tree = _
