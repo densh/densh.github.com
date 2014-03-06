@@ -505,8 +505,8 @@ Here one needs to pay attention to a few nuances:
 
                                    | Quasiquote                                                                                                         | Type 
 -----------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
- [Val](#val-var)                    | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Var](#val-var)                    | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
+ [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
  [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
  [Method](#method)                 | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
@@ -539,7 +539,6 @@ Here one needs to pay attention to a few nuances:
 2. Type definitions without bounds have them set to `q""`.
 3. Try expressions without finally clause have it set to `q""`.
 4. Case clauses without guards have them set to `q""`.
-5. Encoding of partial funtions as match expressions with `q""` scrutinee.
 
 Default toString formats `q""` as `<empty>`.
 
@@ -876,7 +875,7 @@ Try expression is used to handle possible error conditions and ensure consistent
     b: List[universe.CaseDef] = List()
     c: universe.Tree = f
 
-Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. 
+Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. No-finally clause is represented with the help of [empty expression](#empty-expr). 
 
 #### Function {:#function-expr}
 
@@ -941,14 +940,14 @@ limited domain with the help of pattern matching:
       case (i @ (_: Int)) if i.$greater(0) => i.$times(i)
     }
 
-Under the hood they are represented as match trees with [empty](#empty-expr) scrutinee.
-
     scala> val q"{ case ..$cases }" = pf
     cases: List[universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
 
-    scala> val q"$expr match { case ..$cases }" = pf
-    expr: universe.Tree = <empty>
-    cases: List[universe.CaseDef] = List(case (i @ (_: Int)) if i.$greater(0) => i.$times(i))
+Weird default pretty printed view on the tree represents the fact that they share similar data structure as
+trees for match expressions. Despite this fact they do not match one another:
+
+  scala> val q"$expr match { case ..$cases }" = pf
+  scala.MatchError: ...
 
 #### While and Do-While Loops {:#while}
 
