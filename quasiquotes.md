@@ -1470,6 +1470,32 @@ Simiarly one can also make a mutable pattern definition:
 
 #### Package Definitions{:#package}
 
+Packages are a fundamental primitive to organize source code. You can express them in quasiquotes as:
+
+    scala> val pack = q"package mycorp.myproj { class MyClass }"
+    pack: universe.PackageDef =
+    package mycorp.myproj {
+      class MyClass extends scala.AnyRef {
+        def <init>() = {
+          super.<init>();
+          ()
+        }
+      }
+    }
+
+    scala> val q"package $ref { ..$body }" = pack
+    ref: universe.RefTree = mycorp.myproj
+    body: List[universe.Tree] =
+    List(class MyClass extends scala.AnyRef {
+      def <init>() = {
+        super.<init>();
+        ()
+      }
+    })
+
+Quasiquotes don\'t support inline package definition syntax that are usually used in the
+header of the source file.
+
 #### Package Object Definition{:#package-object}
 
 #### Import Definition {:#import}
@@ -1491,8 +1517,8 @@ Similarly one construct imports back from a programmatically created list of sel
 
     scala> val ref = q"a.b"
     scala> val sels = List(pq"foo -> _", pq"_")
-    scala> q"import $ref.{..$sels}"
-    res11: universe.Import = import a.b.{foo=>_, _}
+    scala> val imp = q"import $ref.{..$sels}"
+    imp: universe.Import = import a.b.{foo=>_, _}
 
 ## Terminology summary {:#terminology}
 
