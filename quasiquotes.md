@@ -1390,7 +1390,7 @@ Vals and vars are disjoint (they don't match one another):
     scala.MatchError: var x = 2 (of class scala.reflect.internal.Trees$ValDef)
       ... 32 elided
 
-Vars always have MUTABLE flag in their modifiers:
+Vars always have `MUTABLE` flag in their modifiers:
 
     scala> val q"$mods var $name: $tpt = $rhs" = q"var x = 2"
     mods: universe.Modifiers = Modifiers(<mutable>, , Map())
@@ -1454,7 +1454,7 @@ Generic form of pattern definition consists of modifiers, pattern, ascribed type
 
     q"$mods val $pat: $tpt = $rhs"
 
-Simiarly one can also make a mutable pattern definition:
+Simiarly one can also construct a mutable pattern definition:
 
     q"$mods var $pat: $tpt = $rhs"
 
@@ -1468,7 +1468,7 @@ Simiarly one can also make a mutable pattern definition:
 
 #### Object Definition {:#object}
 
-#### Package Definitions{:#package}
+#### Package Definition {:#package}
 
 Packages are a fundamental primitive to organize source code. You can express them in quasiquotes as:
 
