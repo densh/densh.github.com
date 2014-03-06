@@ -507,9 +507,9 @@ Here one needs to pay attention to a few nuances:
 ---------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
  [Val](#val-var-definition)            | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
  [Var](#val-var-definition)            | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Val Pattern](#val-var-definition)    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
- [Var Pattern](#val-var-definition)    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
- [Def](#def-definition)                | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
+ [Val Pattern](#pattern-definition)    | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
+ [Var Pattern](#pattern-definition)    | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
+ [Method](#method-definition)          | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
  [Type](#type-definition)              | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
  [Class](#class-definition)            | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  [Trait](#trait-definition)            | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
@@ -927,7 +927,7 @@ You can also tear arguments further apart:
     name: universe.TermName = a
     tpt: universe.Tree = Int
 
-It's recommended to use underscore pattern in place of modifiers even if you don't plan to work 
+It's recommended to use underscore pattern in place of [modifiers](#modifiers) even if you don't plan to work 
 with them as parameters may contains additional flags which might cause match errors.
 
 #### Partial Function {:#partial-function}
@@ -1033,7 +1033,7 @@ See [templates](#templates) section for details.
 
 Empty type (`tq""`) is a canonical way to say that type at given location isn't given by the user and should be inferred by the compiler:
 
-1. [Def](#def-definition) with unknown return type
+1. [Def](#method-definition) with unknown return type
 2. [Val or Var](#val-var-definition) with unknown type
 3. [Anonymous function](#function-expr) with unknown argument type
 
@@ -1322,7 +1322,7 @@ In deconstruction one can either extract `Modifiers` or annotations, but you can
     scala> val q"@..$annots implicit def f" = q"@foo @bar implicit def f"
     annots: List[universe.Tree] = List(new foo(), new bar())
 
-Considering the fact that definitions might contain various low-level flags added to trees during typechecking it\'s recommended to always extract complete modifiers as otherwise your pattern might not be exhaustive. If you don't care about them just use a wildcard there:
+Considering the fact that definitions might contain various low-level flags added to trees during typechecking it\'s recommended to always extract complete modifiers as otherwise your pattern might not be exhaustive. If you don't care about them just use a wildcard:
 
     scala> val q"$_ def f" = q"@foo @bar implicit def f"
 
@@ -1369,9 +1369,92 @@ So template consists of:
 
 #### Val and Var Definitions {:#val-var-definition}
 
-Vals and vars allow you to define immutable and mutable variables correspondingly.
+Vals and vars allow you to define immutable and mutable variables correspondingly. Additionally they are also used to represent [function](#function-expr), [class](#class-definition) and [method](#method-definition) paremeters.
 
-#### Def Definition {:#def-definition}
+Each val and var consistents of four components: modifiers, name, type tree and a right hand side:
+
+    scala> val valx = q"val x = 2"
+    valx: universe.ValDef = val x = 2
+
+    scala> val q"$mods val $name: $tpt = $rhs" = valx
+    mods: universe.Modifiers = Modifiers(, , Map())
+    name: universe.TermName = x
+    tpt: universe.Tree = <type ?>
+    rhs: universe.Tree = 2
+
+If type of the val isn't explicitly specified by the user an [empty type](#empty-type) is used as tpt. 
+
+Vals and vars are disjoint (they don't match one another):
+
+    scala> val q"$mods val $name: $tpt = $rhs" = q"var x = 2"
+    scala.MatchError: var x = 2 (of class scala.reflect.internal.Trees$ValDef)
+      ... 32 elided
+
+Vars always have MUTABLE flag in their modifiers:
+
+    scala> val q"$mods var $name: $tpt = $rhs" = q"var x = 2"
+    mods: universe.Modifiers = Modifiers(<mutable>, , Map())
+    name: universe.TermName = x
+    tpt: universe.Tree = <type ?>
+    rhs: universe.Tree = 2
+
+#### Pattern Definition {:#pattern-definition}
+
+Pattern definitions allow to use scala pattern matching capabilities to define variables. Unlike
+val and var definitions, pattern definitions are not first-class and they are get represented 
+through combination of regular vals and vars and pattern matching:
+
+    scala> val patdef = q"val (x, y) = (1, 2)"
+    patdef: universe.Tree =
+    {
+      <synthetic> <artifact> private[this] val x$2 = scala.Tuple2(1, 2): @scala.unchecked match {
+        case scala.Tuple2((x @ _), (y @ _)) => scala.Tuple2(x, y)
+      };
+      val x = x$2._1;
+      val y = x$2._2;
+      ()
+    }
+
+This representation has a few side-effects on the usage of such definitions:
+
+1. Due to the fact that single definition often gets desugared into multiple lower-level
+   ones, one need to always use unquote splicing to unquote pattern definitions into other trees:
+
+        scala> val tupsum = q"..$patdef; a + b"
+        tupsum: universe.Tree =
+        {
+          <synthetic> <artifact> private[this] val x$3 = scala.Tuple2(1, 2): @scala.unchecked match {
+            case scala.Tuple2((x @ _), (y @ _)) => scala.Tuple2(x, y)
+          };
+          val x = x$3._1;
+          val y = x$3._2;
+          a.$plus(b)
+        }
+
+   Otherwise if a regular unquoting is used, the definitions will be nested in a block that will make 
+   them invisible in the scope where they are meant to be used:
+
+        scala> val wrongtupsum = q"$patdef; a + b"
+        wrongtupsum: universe.Tree =
+        {
+          {
+            <synthetic> <artifact> private[this] val x$3 = scala.Tuple2(1, 2): @scala.unchecked match {
+              case scala.Tuple2((x @ _), (y @ _)) => scala.Tuple2(x, y)
+            };
+            val x = x$3._1;
+            val y = x$3._2;
+            ()
+          };
+          a.$plus(b)
+        }
+
+2. One can only construct pattern definitions, not deconstruct them. 
+
+Generic form of pattern definition consists of modifiers, pattern, ascribed type and a right hand side:
+
+    q"$mods val $pat: $tpt = $rhs"
+
+#### Method Definition {:#method-definition}
 
 #### Type Definition {:#type-definition}
 
