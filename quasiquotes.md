@@ -236,7 +236,7 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
          q"$wrapper($x)"
        }
 
-Fixing this issue is number one priority for 2.12. (see [future prospects](#future))
+Fixing this issue is the number one priority for 2.12. (see [future prospects](#future))
 
 ## Lifting {:#lifting}
 
