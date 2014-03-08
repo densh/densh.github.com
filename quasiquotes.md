@@ -150,7 +150,7 @@ Splicing can be easily combined with regular unquotation:
     scala> val fabcab = q"f(..$ab, $c, ..$ab)"
     fabcab: universe.Tree = f(a, b, c, a, b)
 
-If you want to abstract over applications even further you can use `..$`:
+If you want to abstract over applications even further you can use `...$`:
 
     scala> val arglists = List(ab, List(c))
     arglists: List[List[universe.Ident]] = List(List(a, b), List(c))
