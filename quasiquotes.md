@@ -226,7 +226,7 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
          q"_root_.example.MyMacro.wrapper($x)"
        }
 
-   It's imporant to start with `_root_` as otherwise there will still be a chance of collision of example gets redefined at use-site of the macro. 
+   It's imporant to start with `_root_` as otherwise there will still be a chance of name collision if example gets redefined at use-site of the macro. 
 
 2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
 
