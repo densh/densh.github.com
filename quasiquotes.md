@@ -231,9 +231,9 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
 2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
 
        def impl(c: Context)(x: c.Tree) = { import c.universe._
-         val myMacroRef = symbolOf[MyMacro.type].asClass.module
-         val wrapperRef = myMacroRef.info.member(TermName("wrapper"))
-         q"$wrapperRef($x)"
+         val myMacro = symbolOf[MyMacro.type].asClass.module
+         val wrapper = myMacro.info.member(TermName("wrapper"))
+         q"$wrapper($x)"
        }
 
 Fixing this issue is number one priority for 2.12. (see [future prospects](#future))
