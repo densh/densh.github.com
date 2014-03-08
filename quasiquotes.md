@@ -184,6 +184,60 @@ In this section we only worked with function arguments but the same splicing rul
 
 ## Referential transparency {:#referential-transparency}
 
+In 2.11 quasiquotes are not referentially transparent, meaning that all identifiers used in a quasiquote will be resolved as-is when the macro expands. For example:
+
+     // ---- MyMacro.scala ----
+     package example
+
+     import reflect.macros.blackbox.Context
+     import language.experimental.macros
+     
+     object MyMacro {
+       def wrapper(x: Int) = { println(s"wrapped x = $x"); x }
+       def apply(x: Int): Int = macro impl
+       def impl(c: Context)(x: c.Tree) = { import c.universe._
+         q"wrapper($x)"
+       }
+     }
+
+     // ---- Test.scala ----
+     package example
+
+     object Test extends App {
+       def wrapper(x: Int) = x 
+       MyMacro(2)
+     }
+
+If we compile both macro and it's usage we'll see that `println` will not be called when application runs. This will happen because after macro expansion `Test.scala` will look like:
+
+    // Expanded Test.scala
+    package example
+
+    object Test extends App {
+      def wrapper(x: Int) = x
+      wrapper(2)
+    }   
+
+And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid this kind of erros one can use two possible workarounds:
+
+1. Fully qualify all references. i.e. we can addapt our macros' implementation to:
+
+       def impl(c: Context)(x: c.Tree) = { import c.universe._
+         q"_root_.example.MyMacro.wrapper($x)"
+       }
+
+   It's imporant to start with `_root_` as otherwise there will still be a chance of collision of example gets redefined at use-site of the macro. 
+
+2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
+
+       def impl(c: Context)(x: c.Tree) = { import c.universe._
+         val myMacroRef = symbolOf[MyMacro.type].asClass.module
+         val wrapperRef = myMacroRef.info.member(TermName("wrapper"))
+         q"$wrapperRef($x)"
+       }
+
+Fixing this issue is number one priority for 2.12. (see [future prospects](#future))
+
 ## Lifting {:#lifting}
 
 Lifting is and extensible way to unquote custom data types in quasiquotes. Its primary use-case is support unquoting of [literal](#literal) values and a number of reflection primitives as trees:
@@ -1541,7 +1595,7 @@ Similarly one construct imports back from a programmatically created list of sel
 * [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
 * [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
 
-## Future prospects
+## Future prospects {:#future}
 
 * Referential transparency: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
 * Alternative to Scheme's ellipsis: [SI-8164](https://issues.scala-lang.org/browse/SI-8164)
