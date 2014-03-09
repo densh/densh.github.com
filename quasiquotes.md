@@ -95,7 +95,7 @@ Each of this contexts is covered by separate interpolator:
 
     | Used for 
 ----|----------------------------------------------------------------
- q  | [expressions](#exprs-summary) and [definitions](#defns-summary)
+ q  | [expressions](#exprs-summary), [definitions](#defns-summary) and [imports](#import)
  tq | [types](#types-summary)
  pq | [patterns](#pats-summary)
 
