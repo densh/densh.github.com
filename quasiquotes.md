@@ -573,12 +573,12 @@ Here one needs to pay attention to a few nuances:
  [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                   | ModuleDef
  [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                    | PackageDef
  [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                                | PackageDef
- [Import](#import)                 | `q"import $ref.{..$sels}"`                                                                                           | Import
 
 ### Auxiliary {:#aux-summary}
 
                                      | Quasiquote                  | Type
 -------------------------------------|-----------------------------|--------
+ [Import](#import)                   | `q"import $ref.{..$sels}"`  | Import
  [Case Clause](#match)               | `cq"$pat if $expr => expr"` | CaseDef
  [Generator Enumerator](#for)        | `fq"$pat <- $expr"`         | Tree
  [Value Definition Enumerator](#for) | `fq"$pat = $expr"`          | Tree
@@ -1564,7 +1564,9 @@ header of the source file.
 
 #### Package Object Definition{:#package-object}
 
-#### Import Definition {:#import}
+### Auxiliary
+
+#### Import {:#import}
 
 Import trees consist of reference and a list of selectors:
 
