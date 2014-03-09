@@ -600,14 +600,14 @@ Default toString formats `q""` as `<empty>`.
 
 Scala has a number of default built-in literals:
     
-    q"1", q"1L"         // integer literals
-    q"1.0", q"1.0D"     // floating point literals
-    q"true", q"false"   // boolean literals
-    q"'c'"              // character literal
-    q""" "string" """   // string literal
-    q"'symbol"          // symbol literal
-    q"null"             // null literal
-    q"()"               // unit literal
+    q"1", q"1L"              // integer literals
+    q"1.0f", q"1.0", q"1.0d" // floating point literals
+    q"true", q"false"        // boolean literals
+    q"'c'"                   // character literal
+    q""" "string" """        // string literal
+    q"'symbol"               // symbol literal
+    q"null"                  // null literal
+    q"()"                    // unit literal
 
 All of those values have Literal type except symbols which have different representation:
 
