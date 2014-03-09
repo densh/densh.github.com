@@ -218,7 +218,7 @@ If we compile both macro and it's usage we'll see that `println` will not be cal
       wrapper(2)
     }   
 
-And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid this kind of erros one can use two possible workarounds:
+And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid this kind of errors one can use two possible workarounds:
 
 1. Fully qualify all references. i.e. we can addapt our macros' implementation to:
 
