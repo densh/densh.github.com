@@ -584,7 +584,7 @@ Here one needs to pay attention to a few nuances:
  [Value Definition Enumerator](#for) | `fq"$pat = $expr"`          | Tree
  [Guard Enumerator](#for)            | `fq"if $expr"`              | Tree
 
-## Syntax details 
+## Syntax details {:#syntax-details} 
 
 ### Expressions
 
