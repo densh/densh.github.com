@@ -158,7 +158,7 @@ If you want to abstract over applications even further you can use `...$`:
     scala> val fargss = q"f(...$argss)"
     fargss: universe.Tree = f(a, b)(c)
 
-At the momeent `...$` splicing is only supported for function applications and parameter lists in def and class definitions.
+At the moment `...$` splicing is only supported for function applications and parameter lists in def and class definitions.
 
 Similarly to construction one can also use `..$` and `...$` to tear trees apart:
 
