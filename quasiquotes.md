@@ -134,7 +134,7 @@ Unquote splicing is a way to unquote a variable number of elements:
 
     scala> val ab = List(q"a", q"b")
     scala> val fab = q"f(..$ab)"
-    fxs: universe.Tree = f(a, b)
+    fab: universe.Tree = f(a, b)
 
 Dots near unquotee annotate degree of flattenning and are also called splicing rank. `..$` expects argument to be an `Iterable[Tree]` and `...$` expects `Iterable[Iterable[Tree]]`. 
 
@@ -152,11 +152,11 @@ Splicing can be easily combined with regular unquotation:
 
 If you want to abstract over applications even further you can use `...$`:
 
-    scala> val arglists = List(ab, List(c))
+    scala> val argss = List(ab, List(c))
     arglists: List[List[universe.Ident]] = List(List(a, b), List(c))
 
-    scala> q"f(...$arglists)"
-    res11: universe.Tree = f(a, b)(c)
+    scala> val fargss = q"f(...$argss)"
+    fargss: universe.Tree = f(a, b)(c)
 
 At the momeent `...$` splicing is only supported for function applications and parameter lists in def and class definitions.
 
@@ -165,8 +165,8 @@ Similarly to construction one can also use `..$` and `...$` to tear trees apart:
     scala> val q"f(..$args)" = q"f(a, b)"
     args: List[universe.Tree] = List(a, b)
 
-    scala> val q"f(...$args)" = q"f(a, b)(c)"
-    args: List[List[universe.Tree]] = List(List(a, b), List(c))
+    scala> val q"f(...$argss)" = q"f(a, b)(c)"
+    argss: List[List[universe.Tree]] = List(List(a, b), List(c))
 
 Although there are some limitations to the way to you can combine it with regular `$` variable extraction:
 
@@ -220,7 +220,7 @@ If we compile both macro and it's usage we'll see that `println` will not be cal
 
 And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid this kind of errors one can use two possible workarounds:
 
-1. Fully qualify all references. i.e. we can addapt our macros' implementation to:
+1. Fully qualify all references. i.e. we can adapt our macros' implementation to:
 
        def impl(c: Context)(x: c.Tree) = { import c.universe._
          q"_root_.example.MyMacro.wrapper($x)"
@@ -483,11 +483,14 @@ Here one needs to pay attention to a few nuances:
 * `tpname: TypeName`
 * `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
 * `expr: Tree` that contains an expression
+* `exprs: List[Tree]` where each element is an expression
+* `exprss: List[List[Tree]]` where each element is an expression
 * `tpt: Tree` that contains a type
+* `tpts: List[Tree]` where each element is a type
 * `pat: Tree` that contains a pattern
-* `args: List[Tree]` where each element is a parameter
-* `argss: List[List[Tree]]` where each element is a parameter
-* `targs: List[Tree]` where each element is a type argument
+* `pats: List[Tree]` where each element is a pattern
+* `params: List[Tree]` where each element is a parameter
+* `paramss: List[List[Tree]]` where each element is a parameter
 * `enums: List[Tree]` where each element is a for loop enumerator
 * `early: List[Tree]` where each element is early definition
 * `parents: List[Tree]` where each element is a parent
@@ -507,8 +510,8 @@ Here one needs to pay attention to a few nuances:
  [Selection](#term-ref)                 | `q"$expr.$tname"`                                           | Select
  [Super Selection](#super-this)         | `q"$tpname.super[$tpname].$tname"`                          | Select
  [This](#super-this)                    | `q"$tpname.this"`                                           | This
- [Application](#application)            | `q"$expr(...$argss)"`                                       | Apply
- [Type Application] (#application)      | `q"$expr[..$targs]"`                                        | TypeApply
+ [Application](#application)            | `q"$expr(...$exprss)"`                                      | Apply
+ [Type Application] (#application)      | `q"$expr[..$tpts]"`                                         | TypeApply
  [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
  [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
  [Return](#return)                      | `q"return $expr"`                                           | Return
@@ -519,7 +522,7 @@ Here one needs to pay attention to a few nuances:
  [If](#if)                              | `q"if ($expr) $expr else $expr"`                            | If
  [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                          | Match
  [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
- [Function](#function-expr)             | `q"(..$args) => $expr"`                                     | Function
+ [Function](#function-expr)             | `q"(..$params) => $expr"`                                   | Function
  [Partial Function](#partial-function)  | `q"{ case ..$cases }"`                                      | Match
  [While Loop](#while)                   | `q"while ($expr) $expr"`                                    | LabelDef 
  [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                 | LabelDef
@@ -557,20 +560,20 @@ Here one needs to pay attention to a few nuances:
  
 ### Definitions {:#defns-summary}
 
-                                   | Quasiquote                                                                                                         | Type 
------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------
- [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                 | ValDef
- [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                  | Tree
- [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                  | Tree
- [Method](#method)                 | `q"$mods def $tname[..$targs](...$argss): $tpt = $expr"`                                                           | DefDef
- [Type](#type-def)                 | `q"$mods type $tpname[..$targs] = $tpt"`                                                                           | TypeDef
- [Class](#class)                   | `q"$mods class $tpname[..$targs] $ctorMods(...$argss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
- [Trait](#trait)                   | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                      | TraitDef
- [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                 | ModuleDef
- [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                  | PackageDef
- [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                              | PackageDef
- [Import](#import)                 | `q"import $ref.{..$sels}"`                                                                                         | Import
+                                   | Quasiquote                                                                                                           | Type 
+-----------------------------------|----------------------------------------------------------------------------------------------------------------------|-----------
+ [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                   | ValDef
+ [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                   | ValDef
+ [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                    | Tree
+ [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                    | Tree
+ [Method](#method)                 | `q"$mods def $tname[..$targs](...$paramss): $tpt = $expr"`                                                           | DefDef
+ [Type](#type-def)                 | `q"$mods type $tpname[..$targs] = $tpt"`                                                                             | TypeDef
+ [Class](#class)                   | `q"$mods class $tpname[..$targs] $ctorMods(...$paramss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
+ [Trait](#trait)                   | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                        | TraitDef
+ [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                   | ModuleDef
+ [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                    | PackageDef
+ [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                                | PackageDef
+ [Import](#import)                 | `q"import $ref.{..$sels}"`                                                                                           | Import
 
 ### Auxiliary {:#aux-summary}
 
@@ -974,19 +977,19 @@ its type inferred you need to use [empty type](#empty-type):
 All of the given forms are represented in the same way and could be uniformly matched upon:
 
     scala> List(f1, f2, f3).foreach { 
-             case q"(..$args) => $expr" => 
-               println(s"args = $args, expr = $expr") 
+             case q"(..$params) => $body" => 
+               println(s"params = $params, body = $body") 
            }
-    args = List(<synthetic> val x$5 = _), expr = x$5.$plus(1)
-    args = List(val a = _), expr = a.$plus(1)
-    args = List(val a: Int = _), expr = a.$plus(1)
+    params = List(<synthetic> val x$5 = _), body = x$5.$plus(1)
+    params = List(val a = _), body = a.$plus(1)
+    params = List(val a: Int = _), body = a.$plus(1)
 
 You can also tear arguments further apart:
 
-    scala> val q"(..$args => $_)" = f3
-    args: List[universe.ValDef] = List(val a: Int = _)
+    scala> val q"(..$params) => $_" = f3
+    params: List[universe.ValDef] = List(val a: Int = _)
 
-    scala> val List(q"$_ val $name: $tpt") = args
+    scala> val List(q"$_ val $name: $tpt") = params
     name: universe.TermName = a
     tpt: universe.Tree = Int
 
@@ -1407,10 +1410,10 @@ So template consists of:
  
 2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
 
-        scala> val q"new $first[..$targs](...$argss) with ..$rest"  = q"new Foo(1) with Bar[T]"
-        first: universe.Tree = Foo
-        targs: List[universe.Tree] = List()
-        argss: List[List[universe.Tree]] = List(List(1))
+        scala> val q"new $parent[..$tpts](...$exprss) with ..$rest"  = q"new Foo(1) with Bar[T]"
+        parent: universe.Tree = Foo
+        tpts: List[universe.Tree] = List()
+        exprss: List[List[universe.Tree]] = List(List(1))
         rest: List[universe.Tree] = List(Bar[T])
 
         scala> val List(tq"Bar[T]") = rest
