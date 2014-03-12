@@ -475,6 +475,139 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
+## Use cases {:#use-cases}
+
+### AST manipulation in macros and compiler plugins {:#ast-manipulation}
+
+Quasiquotes were designed primary as tool for ast manipulation in macros. Common workflow is to deconstruct arguments with quasiquotes patterns and construct rewritten result with another quasiquote:
+
+    // macro that prints expression code before executing it
+    object debug {
+      def apply[T](x: =>T): T = macro impl
+      def impl(c: Context)(x: c.Tree) = { import c.universe._
+        val q"..$stats" = x
+        val loggedStats = stats.flatMap { stat =>
+          val msg = "executing " + showCode(stat)
+          List(q"println($msg)", stat)
+        }
+        q"..$loggedStats"
+      }
+    }
+
+    // usage
+    object Test extends App {
+      def faulty: Int = throw new Exception
+      debug { 
+        val x = 1
+        val y = x + faulty
+        x + y
+      }
+    }
+
+    // output
+    executing val x: Int = 1
+    executing val y: Int = x.+(Test.this.faulty)
+    java.lang.Exception
+    ...
+
+To simplify integration with macros we've also made it easier to just use trees in macro implementations instead of previous reify-centric `Expr` api:
+
+    // 2.10
+    object Macro {
+      def apply(x: Int): Int = macro impl
+      def impl(c: Context)(x: c.Expr[Int]): c.Expr[Int] = { import c.universe._
+        c.Expr(q"$x + 1")
+      }
+    }
+    
+    // in 2.11 you can also do it like that
+    object Macro {
+      def apply(x: Int): Int = macro impl
+      def impl(c: Context)(x: c.Tree) = { import c.universe._
+        q"$x + 1"
+      }
+    }
+
+You don't have to manually wrap return value of a macro into `c.Expr` or specify argument types twice any more. Return type in `impl` is optional too. (see also [quasiquotes vs reify](#quasiquotes-vs-reify))
+
+Quasiquotes can also be effortelessly used in compiler plugins as reflection api is strict subset of compiler's `Global` api. 
+
+### DSLs {:#dsls}
+
+Thanks to untyped nature of quasiquotes and rich Scala syntax one can define their own domain specific languages with the help of it:
+
+    import reflect.runtime.universe._
+
+    val config = Config(q"""
+      endpoint {
+        listen      = 80
+        server_name = "domain.com"
+        redirect_to = "www.domain.com"
+      }
+      endpoint {
+        listen      = 80
+        server_name = "www.domain.com"
+        root        = "/home/domain.com"
+      }
+    """)
+
+Where config constructor would just interprete code snippet with the help of patten matching:
+
+    import reflect.runtime.universe._
+
+    final case class Endpoint(list: Map[String, Any])
+    final case class Config(endpoints: List[Endpoint])
+    object Config {
+      def incorrect(msg: String, tree: Tree): Nothing =
+        throw new IllegalArgumentException(s"incorrect $msg: ${showCode(tree)}")
+      implicit val unliftEndpoint = Unliftable[Endpoint] {
+        case q"endpoint { ..$props }" =>
+          Endpoint(props.map { 
+            case q"${name: Name} = ${value: Int}" =>
+              (name.toString, value)
+            case q"${name: Name} = ${value: String}" =>
+              (name.toString, value)
+            case prop =>
+              incorrect("property definition", prop)
+          }.toMap)
+        case endpoint =>
+          incorrect("endpoint definition", endpoint)
+      }
+      def apply(config: Tree): Config = config match {
+        case q"..${endpoints: List[Endpoint]}" => Config(endpoints) 
+      }
+    }
+
+### Just in time compilation 
+
+Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
+
+    scala> import reflect.runtime.currentMirror
+    scala> import scala.tools.reflect.ToolBox
+    scala> val code = q"""println("compiled and run at runtime!")"""
+    scala> val toolbox = currentMirror.mkToolBox()
+    scala> val compiledCode = toolbox.compile(code)
+    scala> val result = compiledCode()
+    compiled and run at runtime!
+    result: Any = ()
+
+### Offline code generation 
+
+Thanks to new `showRaw` pretty printer one can implement offline code generator that does AST manipulation with the help of quasiquotes and then serializes into actual source right before writing them to disk:
+
+    object OfflineCodeGen extends App {
+      def generateCode() =
+        q"package mypackage { class MyClass }"
+      def saveToFile(path: String, code: Tree) = {
+        val writer = new java.io.PrintWriter(path)
+        try writer.write(showCode(code))
+        finally writer.close()
+      }
+      saveToFile("myfile.scala", generateCode())
+    }
+
+## Quasiquotes vs reify {:#quasiquotes-vs-reify}
+
 ## Syntax overview {:#syntax-overview}
 
 ### Abbreviations {:#abbrev}
