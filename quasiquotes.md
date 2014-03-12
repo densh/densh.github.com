@@ -555,7 +555,7 @@ Where config constructor would just interprete code snippet with the help of pat
 
     import reflect.runtime.universe._
 
-    final case class Endpoint(list: Map[String, Any])
+    final case class Endpoint(props: Map[String, Any])
     final case class Config(endpoints: List[Endpoint])
     object Config {
       def incorrect(msg: String, tree: Tree): Nothing =
