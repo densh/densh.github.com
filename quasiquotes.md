@@ -1,9 +1,7 @@
 ---
 layout: page 
-title: Quasiquotes
+title: Quasiquote guide (WIP)
 ---
-
-# Quasiquote guide (WIP)
 
 {:#toc}
 * Table of contents.
