@@ -11,9 +11,15 @@ title: Quasiquote guide (WIP)
 
 Before you start reading this guide it's recommended to start a Scala REPL with one extra line:
 
-    val universe = reflect.runtime.universe; import universe._
+    scala> val universe = reflect.runtime.universe; import universe._
 
 REPL is the best place to explore quasiquotes and this guide will use it extensively to demonstrate handling of trees. All of the examples will assume that import.
+
+Additionally some examples that use `ToolBox` API might need a few more lines to get things rolling:
+
+    scala> import reflect.runtime.currentMirror
+    scala> import tools.reflect.ToolBox
+    scala> val toolbox = currentMirror.mkToolBox()
 
 Another tool you might want to be aware of is new and shiny `showCode` pretty printer (contributed by [@VladimirNik](https://github.com/VladimirNik)):
 
@@ -185,7 +191,7 @@ In this section we only worked with function arguments but the same splicing rul
 
 In 2.11 quasiquotes are not referentially transparent meaning that they don\'t have any knowledge of lexical context around them. For example:
 
-    scala> import scala.collection.mutable.Map
+    scala> import collection.mutable.Map
 
     scala> def typecheckType(tree: Tree): Type =
              toolbox.typecheck(tree, toolbox.TYPEmode).tpe
@@ -240,7 +246,7 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
          q"_root_.example.MyMacro.wrapper($x)"
        }
 
-   It's imporant to start with `_root_` as otherwise there will still be a chance of name collision if example gets redefined at use-site of the macro. 
+   It's important to start with `_root_` as otherwise there will still be a chance of name collision if `example` gets redefined at use-site of the macro. 
 
 2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
 
@@ -592,16 +598,13 @@ Where config constructor would just interprete code snippet with the help of pat
       }
     }
 
-It's also possible to pass such definition as string and use ToolBox to parse it into a tree.    
+It's also possible to pass such definition as string and use `ToolBox` to parse it into a tree.    
 
 ### Just in time compilation 
 
 Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
 
-    scala> import reflect.runtime.currentMirror
-    scala> import tools.reflect.ToolBox
     scala> val code = q"""println("compiled and run at runtime!")"""
-    scala> val toolbox = currentMirror.mkToolBox()
     scala> val compiledCode = toolbox.compile(code)
     scala> val result = compiledCode()
     compiled and run at runtime!
