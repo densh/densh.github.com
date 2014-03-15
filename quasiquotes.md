@@ -181,31 +181,46 @@ So in general only one `..$` is allowed per given list. Similar restrictions als
 
 In this section we only worked with function arguments but the same splicing rules are true for all syntax forms with variable amount of elements. [Syntax overview](#syntax-overview) and corresponding [syntax details](#syntax-details) sections demonstrate how you can splice into other syntactic forms.
 
-## Referential transparency {:#referential-transparency}
+## Referential transparency and hygiene {:#referential-transparency}
 
-In 2.11 quasiquotes are not referentially transparent, meaning that all identifiers used in a quasiquote will be resolved as-is when the macro expands. For example:
+In 2.11 quasiquotes are not referentially transparent meaning that they don\'t have any knowledge of lexical context around them. For example:
 
-     // ---- MyMacro.scala ----
-     package example
+    scala> import scala.collection.mutable.Map
 
-     import reflect.macros.blackbox.Context
-     import language.experimental.macros
-     
-     object MyMacro {
-       def wrapper(x: Int) = { println(s"wrapped x = $x"); x }
-       def apply(x: Int): Int = macro impl
-       def impl(c: Context)(x: c.Tree) = { import c.universe._
-         q"wrapper($x)"
-       }
-     }
+    scala> def typecheckType(tree: Tree): Type =
+             toolbox.typecheck(tree, toolbox.TYPEmode).tpe
 
-     // ---- Test.scala ----
-     package example
+    scala> typecheckType(tq"Map[_, _]") =:= typeOf[Map[_, _]]
+    false
 
-     object Test extends App {
-       def wrapper(x: Int) = x 
-       MyMacro(2)
-     }
+    scala> typecheckType(tq"Map[_, _]") =:= typeOf[collection.immutable.Map[_, _]]
+    true
+      
+Here we can see that plain reference to `Map` doesn\'t respect our custom import and resolves to default `collection.immutable.Map` instead. 
+
+Similar problems can arise if references aren't fully qualified in macros. Current macro system isn't hygienic and it doesn't resolve name clashes between result of the macro and lexical scope where macro is used:
+
+    // ---- MyMacro.scala ----
+    package example
+
+    import reflect.macros.blackbox.Context
+    import language.experimental.macros
+
+    object MyMacro {
+      def wrapper(x: Int) = { println(s"wrapped x = $x"); x }
+      def apply(x: Int): Int = macro impl
+      def impl(c: Context)(x: c.Tree) = { import c.universe._
+        q"wrapper($x)"
+      }
+    }
+
+    // ---- Test.scala ----
+    package example
+
+    object Test extends App {
+      def wrapper(x: Int) = x 
+      MyMacro(2)
+    }
 
 If we compile both macro and it's usage we'll see that `println` will not be called when application runs. This will happen because after macro expansion `Test.scala` will look like:
 
@@ -235,7 +250,7 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
          q"$wrapper($x)"
        }
 
-Fixing this issue is the number one priority for 2.12. (see [future prospects](#future))
+Fixing these issues is the number one priority for 2.12. (see [future prospects](#future))
 
 ## Lifting {:#lifting}
 
@@ -529,7 +544,7 @@ To simplify integration with macros we've also made it easier to just use trees 
 
 You don't have to manually wrap return value of a macro into `c.Expr` or specify argument types twice any more. Return type in `impl` is optional too. (see also [quasiquotes vs reify](#quasiquotes-vs-reify))
 
-Quasiquotes can also be effortelessly used in compiler plugins as reflection api is strict subset of compiler's `Global` api. 
+Quasiquotes can also be used as is in compiler plugins as reflection api is strict subset of compiler's `Global` api. 
 
 ### DSLs {:#dsls}
 
@@ -577,12 +592,14 @@ Where config constructor would just interprete code snippet with the help of pat
       }
     }
 
+It's also possible to pass such definition as string and use ToolBox to parse it into a tree.    
+
 ### Just in time compilation 
 
 Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
 
     scala> import reflect.runtime.currentMirror
-    scala> import scala.tools.reflect.ToolBox
+    scala> import tools.reflect.ToolBox
     scala> val code = q"""println("compiled and run at runtime!")"""
     scala> val toolbox = currentMirror.mkToolBox()
     scala> val compiledCode = toolbox.compile(code)
@@ -611,26 +628,27 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 
 ### Abbreviations {:#abbrev}
 
-* `tname: TermName`
-* `tpname: TypeName`
-* `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
+* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
+* `early: List[Tree]` where each element is early definition
+* `enums: List[Tree]` where each element is a for loop enumerator
 * `expr: Tree` that contains an expression
 * `exprs: List[Tree]` where each element is an expression
 * `exprss: List[List[Tree]]` where each element is an expression
-* `tpt: Tree` that contains a type
-* `tpts: List[Tree]` where each element is a type
-* `pat: Tree` that contains a pattern
-* `pats: List[Tree]` where each element is a pattern
+* `name: Name`
 * `params: List[Tree]` where each element is a parameter
 * `paramss: List[List[Tree]]` where each element is a parameter
-* `enums: List[Tree]` where each element is a for loop enumerator
-* `early: List[Tree]` where each element is early definition
 * `parents: List[Tree]` where each element is a parent
+* `pat: Tree` that contains a pattern
+* `pats: List[Tree]` where each element is a pattern
 * `self: Tree` that corresponds to self type definition
-* `stats: List[Tree]` where each element is either an expression or definition
-* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
-* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
 * `sels: List[Tree]` where each element is an import selector
+* `stats: List[Tree]` where each element is an expression, definition or import
+* `tname: TermName`
+* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
+* `tpname: TypeName`
+* `tpt: Tree` that contains a type
+* `tpts: List[Tree]` where each element is a type
+* `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
 
 ### Expressions {:#exprs-summary}
 
@@ -648,7 +666,8 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
  [Return](#return)                      | `q"return $expr"`                                           | Return
  [Throw](#throw)                        | `q"throw $expr"`                                            | Throw
- [Ascription](#ascription)              | `q"$expr: $tpt"`                                            | Typed 
+ [Ascription](#ascription)              | `q"$expr: $tpt"`                                            | Typed
+ [Annotated](#annotated-expr)           | `q"$expr: @$annot"`                                         | Annotated
  [Tuple](#tuple-expr)                   | `q"(..$exprs)"`                                             | Tree
  [Block](#block)                        | `q"{ ..$stats }"`                                           | Block
  [If](#if)                              | `q"if ($expr) $expr else $expr"`                            | If
@@ -674,6 +693,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [Super Type Selection](#type-projection) | `tq"$tpname.super[$tpname].$tpname"`  | Select
  [This Type Selection](#type-projection)  | `tq"this.$tpname"`                    | Select
  [Applied Type](#applied-type)            | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
+ [Annotated Type](#annotated-type)        | `tq"$tpt @$annots"`                   | Annotated 
  [Compound Type](#compound-type)          | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  [Existential Type](#existential-type)    | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
  [Tuple Type](#tuple-type)                | `tq"(..$tpts)"`                       | Tree
@@ -684,7 +704,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
                                              | Quasiquote             | Type                    
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
- [Binding Pattern](#binding-pattern)         | `pq"$tname @ $pat"`    | Bind
+ [Binding Pattern](#binding-pattern)         | `pq"$name @ $pat"`     | Bind
  [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
  [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
  [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
@@ -891,6 +911,25 @@ Ascriptions lets users to annotate type of intermidiate expression:
     scala> val q"$expr: $tpt" = ascribed
     expr: universe.Tree = 1.$plus(1)
     tpt: universe.Tree = Int
+
+#### Annotation {:#annotated-expr}
+
+Expressions can be annotated:
+
+    scala> val annotated = q"(1 + 1): @positive"
+    annotated: reflect.runtime.universe.Annotated = 1.$plus(1): @positive
+
+    scala> val q"$expr: @$annot" = annotated
+    expr: reflect.runtime.universe.Tree = 1.$plus(1)
+    annot: reflect.runtime.universe.Tree = positive
+
+It's important to mention that such pattern won't match if we combine annotation with ascription:
+
+    scala> val q"$expr: @$annot" = q"(1 + 1): Int @positive"
+    scala.MatchError: (1.$plus(1): Int @positive) (of class scala.reflect.internal.Trees$Typed)
+      ... 32 elided
+
+In this case we need to deconstruct it as [ascription](#ascription) and then diconstruct `tpt` as [annotated type](#annotated-type).
 
 #### Tuple {:#tuple-expr}
 
@@ -1321,6 +1360,17 @@ Deconstruction of non-applied types will cause `targs` begin extracted as empty 
     scala> val tq"Foo[..$targs]" = tq"Foo"
     targs: List[universe.Tree] = List()
 
+#### Annotated Type {:#annotated-type}
+
+Similarly to expressions types can be annotated:
+
+    scala> val annotated = tq"T @Fooable"
+    annotated: reflect.runtime.universe.Annotated = T @Fooable
+
+    scala> val tq"$tpt @$annot" = annotated
+    tpt: reflect.runtime.universe.Tree = T
+    annot: reflect.runtime.universe.Tree = Fooable
+
 #### Compound Type {:#compound-type}
 
 Compound type lets users to express a combination of a number of types with optional refined member list:
@@ -1400,6 +1450,8 @@ Binding without explicit pattern is equivalent to the one with wildcard pattern:
     scala> val pq"$name @ $pat" = pq"foo"
     name: universe.Name = foo
     pat: universe.Tree = _
+
+See also [type pattern](#type-pattern) for an example of type variable binding. 
 
 #### Extractor Pattern {:#extractor-pattern}
 
