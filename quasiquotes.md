@@ -706,7 +706,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  
                                              | Quasiquote             | Type                    
 ---------------------------------------------|------------------------|-------------------
- [Wildcard Pattern](#wilcard-pattern)        | `pq"_"`                | Ident
+ [Wildcard Pattern](#wildcard-pattern)       | `pq"_"`                | Ident
  [Binding Pattern](#binding-pattern)         | `pq"$name @ $pat"`     | Bind
  [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
  [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
@@ -821,15 +821,15 @@ Apart from matching on identifiers with given name you can also extract their na
     scala> val q"${name: TermName}" = q"Foo"
     name: universe.TermName = Foo
 
+Name ascription is important here as without it you\'ll get pattern that is equivalent to regular pattern variable binding.
+
 Similarly you can create and extract member selections:
 
     scala> val member = TermName("bar")
     member: universe.TermName = bar
 
-    scala> val q"foo.${name: TermName}" = selected
+    scala> val q"foo.$name" = selected
     name: universe.TermName = bar
-
-Although it is possible to just match non-ascribed names in identifiers and selections it's discouraged as behaviour of such matches might change in the future.
 
 #### Super and This {:#super-this}
 
@@ -1292,7 +1292,7 @@ And deconstruct it back through [unlifting](#unlifting):
     scala> val tq"${name: TypeName}" = tq"Foo"
     name: universe.TypeName = Foo
 
-It's recommended to always ascribe name as `TypeName` when you work with type identifiers. Non-ascribed matching behavour may change in the future.
+It's recommended to always ascribe name as `TypeName` when you work with type identifiers. Non-ascribed pattern is equivalent to just a pattern variable binding.
 
 #### Singleton Type {:#singleton-type}
 
@@ -1306,7 +1306,7 @@ A singleton type is a way to express a type of a term definition that is being r
 
 #### Type Projection {:#type-projection}
 
-Type projection is fundamental way to select types as members of other types:
+Type projection is a fundamental way to select types as members of other types:
 
     scala> val proj = tq"Foo#Bar"
     proj: universe.SelectFromTypeTree = Foo#Bar
@@ -1315,17 +1315,15 @@ Type projection is fundamental way to select types as members of other types:
     foo: universe.Tree = Foo
     bar: universe.TypeName = Bar
 
-Similarly to identifiers it's recommended to always ascribe name as `TypeName`. Non-ascribed matching behaviour might change in the future.
+Similarly to identifiers it\'s recommended to always ascribe name as `TypeName`. Non-ascribed matching behaviour might change in the future.
 
 As a convenience one can also select type members of terms:
 
     scala> val int = tq"scala.Int"
     int: universe.Select = scala.Int
 
-    scala> val tq"scala.${name: TypeName}" = int
+    scala> val tq"scala.$name" = int
     name: universe.TypeName = Int
-
-Similarly to identifiers it's recommended to always ascribe name as `TypeName`. Non-ascribed matching behaviour might change in the future.
 
 But semantically such selections are just a shortcut for a combination of singleton types and type projections:
 
@@ -1747,7 +1745,7 @@ Packages are a fundamental primitive to organize source code. You can express th
     })
 
 Quasiquotes don\'t support inline package definition syntax that are usually used in the
-header of the source file.
+header of the source file (but it's equivalent to the supported one in terms of ASTs).
 
 #### Package Object Definition{:#package-object}
 
