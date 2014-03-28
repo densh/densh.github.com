@@ -878,7 +878,10 @@ As you can see update syntax is just a syntactic sugar that gets represented as 
 
 Nevertheless quasiquotes let you deconstruct both of them uniformly according to their user-facing syntax:
 
-    scala> List(assign, update).foreach { case q"$left = $right" => println(s"left = $left, right = $right") }
+    scala> List(assign, update).foreach {
+             case q"$left = $right" =>
+               println(s"left = $left, right = $right") 
+           }
     left = x, right = 2
     left = array(0), right = 1
 
