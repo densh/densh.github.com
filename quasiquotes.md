@@ -683,6 +683,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [For Loop](#for)                       | `q"for (..$enums) $expr"`                                   | Tree
  [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                             | Tree
  [New](#new)                            | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
+ [XML Literal](#xml)                    | Not natively supported                                      | Tree
 
 ### Types {:#types-summary}
 
@@ -713,6 +714,8 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
  [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
  [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
+ [XML Pattern](#xml)                         | Not natively supported | Tree
+ 
  
 ### Definitions {:#defns-summary}
 
@@ -1800,6 +1803,8 @@ Similarly one construct imports back from a programmatically created list of sel
     scala> val sels = List(pq"foo -> _", pq"_")
     scala> val imp = q"import $ref.{..$sels}"
     imp: universe.Import = import a.b.{foo=>_, _}
+
+#### XML {:#xml}
 
 ## Terminology summary {:#terminology}
 
