@@ -723,6 +723,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                    | Tree
  [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                    | Tree
  [Method](#method)                 | `q"$mods def $tname[..$targs](...$paramss): $tpt = $expr"`                                                           | DefDef
+ [Secondary Constructor](#ctor)    | `q"$mods def this(...$paramss) = this(..$argss)"`                                                                    | DefDef
  [Type](#type-def)                 | `q"$mods type $tpname[..$targs] = $tpt"`                                                                             | TypeDef
  [Class](#class)                   | `q"$mods class $tpname[..$targs] $ctorMods(...$paramss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
  [Trait](#trait)                   | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                        | TraitDef
@@ -1735,6 +1736,8 @@ Simiarly one can also construct a mutable pattern definition:
     q"$mods var $pat: $tpt = $rhs"
 
 #### Method Definition {:#method}
+
+#### Secondary Constructor {:#ctor}
 
 #### Type Definition {:#type-def}
 
