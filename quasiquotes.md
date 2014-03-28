@@ -707,6 +707,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
                                              | Quasiquote             | Type                    
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wildcard-pattern)       | `pq"_"`                | Ident
+ [Literal Pattern)#literal-pattern)          | `pq"$value"`           | Literal
  [Binding Pattern](#binding-pattern)         | `pq"$name @ $pat"`     | Bind
  [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
  [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
@@ -1449,6 +1450,15 @@ Similarly to tuples, function types are a syntactic sugar over `FunctionN` class
 #### Wildcard Pattern {:#wildcard-pattern}
 
 Wildcard pattern (`pq"_"`) is the simplest form of pattern that matches any input.
+
+#### Literal Pattern {:#literal-pattern}
+
+Literal patterns are equivalent to literal expressions on AST level:
+
+    scala> val equivalent = pq"1" equalsStructure q"1"
+    equivalent: Boolean = true
+
+See chapter on [literal expressions](#literal) for details. 
 
 #### Binding Pattern {:#binding-pattern}
 
