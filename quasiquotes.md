@@ -707,7 +707,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
                                              | Quasiquote             | Type                    
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wildcard-pattern)       | `pq"_"`                | Ident
- [Literal Pattern)#literal-pattern)          | `pq"$value"`           | Literal
+ [Literal Pattern](#literal-pattern)         | `pq"$value"`           | Literal
  [Binding Pattern](#binding-pattern)         | `pq"$name @ $pat"`     | Bind
  [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
  [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
