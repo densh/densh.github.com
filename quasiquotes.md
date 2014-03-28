@@ -884,6 +884,18 @@ Nevertheless quasiquotes let you deconstruct both of them uniformly according to
 
 Where `array(0)` has the same AST as function application. 
 
+On the other hand if you want to treat this two cases separately it's also possible with following more specific patterns:
+
+    scala> List(assign, update) foreach { 
+             case q"${ref: RefTree} = $expr" =>
+               println(s"assign $expr to $ref")
+             case q"$obj(..$args) = $expr" =>
+               println(s"update $obj at $args with $expr") 
+           }
+    assign 2 to x
+    update array at List(0) with 1
+
+
 #### Return {:#return}
 
 Return expressions is used to perform early return from a function. 
