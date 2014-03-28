@@ -11,7 +11,7 @@ title: Quasiquote guide (WIP)
 
 Before you start reading this guide it's recommended to start a Scala REPL with one extra line:
 
-    scala> val universe = reflect.runtime.universe; import universe._
+    scala> val universe = universe; import universe._
 
 REPL is the best place to explore quasiquotes and this guide will use it extensively to demonstrate handling of trees. All of the examples will assume that import.
 
@@ -286,7 +286,7 @@ One can also combine lifting and unquote splicing:
 
     scala> val intss = List(List(1, 2, 3), List(4, 5), List(6))
     scala> val f123456 = q"f(...$intss)"
-    f123456: reflect.runtime.universe.Tree = f(1, 2, 3)(4, 5)(6)
+    f123456: universe.Tree = f(1, 2, 3)(4, 5)(6)
 
 In this case each element of the list will be lifted separately and the result will be spliced right in. 
 
@@ -556,7 +556,7 @@ Quasiquotes can also be used as is in compiler plugins as reflection api is stri
 
 Thanks to untyped nature of quasiquotes and rich Scala syntax one can define their own domain specific languages with the help of it:
 
-    import reflect.runtime.universe._
+    import universe._
 
     val config = Config(q"""
       endpoint {
@@ -573,7 +573,7 @@ Thanks to untyped nature of quasiquotes and rich Scala syntax one can define the
 
 Where config constructor would just interprete code snippet with the help of patten matching:
 
-    import reflect.runtime.universe._
+    import universe._
 
     final case class Endpoint(props: Map[String, Any])
     final case class Config(endpoints: List[Endpoint])
@@ -624,6 +624,8 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
       }
       saveToFile("myfile.scala", generateCode())
     }
+
+## Typed vs untyped trees 
 
 ## Quasiquotes vs reify {:#quasiquotes-vs-reify}
 
@@ -869,6 +871,62 @@ Similarly for super we have:
 
 #### Application and Type Application {:#application}
 
+Value applications and type applications are two fundamental parts out of which one can construct function calls to Scala functions and methods. Lets assume that we would like to handle function calls to the following method:
+
+    def f[T](xs: T*): List[T] = xs.toList
+
+It can be handled in the following way:
+
+    scala> val apps = List(q"f[Int](1, 2)", q"f('a, 'b)")
+    scala> apps.foreach { 
+             case q"f[..$ts](..$args)" =>
+               println(s"type arguments: $ts, value arguments: $args")
+           }
+    type arguments: List(Int), value arguments: List(1, 2)
+    type arguments: List(), value arguments: List(scala.Symbol("a"), scala.Symbol("b"))
+
+As you can see we were able to match both calls even though one has no explicit type applications an danother does have one. This happens because type application matcher extract empty list of type arguments if the tree is not an actual type application making it possible to uniformly handle situations with and without explicit type applications.
+
+It's recommended to always include type applications when you match on function with type arguments as they will be inserted by the compiler during typechecking even if the user didn't write them explicitly:
+
+    scala> val q"$_; f[..$ts](..$args)" = toolbox.typecheck(q"""
+             def f[T](xs: T*): List[T] = xs.toList
+             f(1, 2, 3)
+           """)
+    ts: List[universe.Tree] = List(Int)
+    args: List[universe.Tree] = List(1, 2, 3) 
+
+Another important feature of scala method calls is multiple argument lists and implicit arguments:
+
+    def g(x: Int)(implicit y: Int) = x + y
+
+Here we might get either one or two subsequent value applications:
+
+    scala> val apps = List(q"g(1)", q"g(1)(2)")
+    scala> apps.foreach {
+             case q"g(...$argss)" if argss.nonEmpty =>
+               println(s"argss: $argss")
+           }
+    argss: List(List(1))
+    argss: List(List(1), List(2))
+
+`...$` in a pattern allows us to greedily all subsequent value applications. Similarly to type arguments matcher one needs to be careful due to the fact that it always matches even if there are no actual value applications:
+
+    scala> val q"g(...$argss)" = q"g"
+    argss: List[List[universe.Tree]] = List()
+
+Therefore it's recommended to use more specific patterns that check that extracted argss is not empty. 
+
+Similarly to type arguments, implicit value arguments are automatically inferred during typechecking:
+
+    scala> val q"..$stats; g(...$argss)" = toolbox.typecheck(q"""
+             def g(x: Int)(implicit y: Int) = x + y
+             implicit val y = 3
+             g(2)
+           """)
+    stats: List[universe.Tree] = List(def g(x: Int)(implicit y: Int): Int = x.+(y), implicit val y: Int = 3)
+    argss: List[List[universe.Tree]] = List(List(2), List(y))
+
 #### Assign and Update {:#assign-update}
 
 Assign and update are two related ways to explictly mutate a variable or collection:
@@ -894,7 +952,7 @@ Where `array(0)` has the same AST as function application.
 
 On the other hand if you want to treat this two cases separately it's also possible with following more specific patterns:
 
-    scala> List(assign, update) foreach { 
+    scala> List(assign, update).foreach { 
              case q"${ref: RefTree} = $expr" =>
                println(s"assign $expr to $ref")
              case q"$obj(..$args) = $expr" =>
@@ -940,11 +998,11 @@ Ascriptions lets users to annotate type of intermidiate expression:
 Expressions can be annotated:
 
     scala> val annotated = q"(1 + 1): @positive"
-    annotated: reflect.runtime.universe.Annotated = 1.$plus(1): @positive
+    annotated: universe.Annotated = 1.$plus(1): @positive
 
     scala> val q"$expr: @$annot" = annotated
-    expr: reflect.runtime.universe.Tree = 1.$plus(1)
-    annot: reflect.runtime.universe.Tree = positive
+    expr: universe.Tree = 1.$plus(1)
+    annot: universe.Tree = positive
 
 It's important to mention that such pattern won't match if we combine annotation with ascription:
 
@@ -1386,11 +1444,11 @@ Deconstruction of non-applied types will cause `targs` begin extracted as empty 
 Similarly to expressions types can be annotated:
 
     scala> val annotated = tq"T @Fooable"
-    annotated: reflect.runtime.universe.Annotated = T @Fooable
+    annotated: universe.Annotated = T @Fooable
 
     scala> val tq"$tpt @$annot" = annotated
-    tpt: reflect.runtime.universe.Tree = T
-    annot: reflect.runtime.universe.Tree = Fooable
+    tpt: universe.Tree = T
+    annot: universe.Tree = Fooable
 
 #### Compound Type {:#compound-type}
 
@@ -1624,13 +1682,21 @@ So template consists of:
  
 2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
 
-        scala> val q"new $parent[..$tpts](...$exprss) with ..$rest"  = q"new Foo(1) with Bar[T]"
-        parent: universe.Tree = Foo
-        tpts: List[universe.Tree] = List()
-        exprss: List[List[universe.Tree]] = List(List(1))
-        rest: List[universe.Tree] = List(Bar[T])
+        scala> val q"new ..$parents"  = q"new Foo(1) with Bar[T]"
+        parents: List[reflect.runtime.universe.Tree] = List(Foo(1), Bar[T])
 
-        scala> val List(tq"Bar[T]") = rest
+   First of the parents has a bit unusual shape that is a symbiosis of term and type trees:
+
+        scala> val q"${tq"$name[..$targs]"}(...$argss)" = parents.head
+        name: reflect.runtime.universe.Tree = Foo
+        targs: List[reflect.runtime.universe.Tree] = List()
+        argss: List[List[reflect.runtime.universe.Tree]] = List(List(1))
+   
+   The others are just plain type trees:
+
+        scala> val tq"$name[..$targs]" = parents.tail.head
+        name: reflect.runtime.universe.Tree = Bar
+        targs: List[reflect.runtime.universe.Tree] = List(T)
 
 3. Self type definition. A val definition that can be used to define an alias to this and provide a self-type via tpt:
 
