@@ -1482,14 +1482,14 @@ Here we can see that AnyRef is a parent that is inserted implicitly if we don't 
 Existential types consist of a type tree and a list of definitions:
 
     scala> val tq"$tpt forSome { ..$defns }" = tq"List[T] forSome { type T }"
-    tpt: reflect.runtime.universe.Tree = List[T]
-    defns: List[reflect.runtime.universe.MemberDef] = List(type T)
+    tpt: universe.Tree = List[T]
+    defns: List[universe.MemberDef] = List(type T)
 
 Alternatively there is also an underscrore notation:
 
     scala> val tq"$tpt forSome { ..$defns }" = tq"List[_]"
-    tpt: reflect.runtime.universe.Tree = List[_$1]
-    defns: List[reflect.runtime.universe.MemberDef] = List(<synthetic> type _$1)
+    tpt: universe.Tree = List[_$1]
+    defns: List[universe.MemberDef] = List(<synthetic> type _$1)
 
 #### Tuple Type {:#tuple-type}
 
@@ -1695,20 +1695,20 @@ So template consists of:
 2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
 
         scala> val q"new ..$parents"  = q"new Foo(1) with Bar[T]"
-        parents: List[reflect.runtime.universe.Tree] = List(Foo(1), Bar[T])
+        parents: List[universe.Tree] = List(Foo(1), Bar[T])
 
    First of the parents has a bit unusual shape that is a symbiosis of term and type trees:
 
         scala> val q"${tq"$name[..$targs]"}(...$argss)" = parents.head
-        name: reflect.runtime.universe.Tree = Foo
-        targs: List[reflect.runtime.universe.Tree] = List()
-        argss: List[List[reflect.runtime.universe.Tree]] = List(List(1))
+        name: universe.Tree = Foo
+        targs: List[universe.Tree] = List()
+        argss: List[List[universe.Tree]] = List(List(1))
    
    The others are just plain type trees:
 
         scala> val tq"$name[..$targs]" = parents.tail.head
-        name: reflect.runtime.universe.Tree = Bar
-        targs: List[reflect.runtime.universe.Tree] = List(T)
+        name: universe.Tree = Bar
+        targs: List[universe.Tree] = List(T)
 
 3. Self type definition. A val definition that can be used to define an alias to this and provide a self-type via tpt:
 
@@ -1824,11 +1824,11 @@ Abstract type definitions have the following shape:
 
     scala> val q"$mods type $name[..$targs] >: $low <: $high" =
                q"type Foo[T] <: List[T]"
-    mods: reflect.runtime.universe.Modifiers = Modifiers(<deferred>, , Map())
-    name: reflect.runtime.universe.TypeName = Foo
-    targs: List[reflect.runtime.universe.TypeDef] = List(type T)
-    low: reflect.runtime.universe.Tree = <empty>
-    high: reflect.runtime.universe.Tree = List[T]
+    mods: universe.Modifiers = Modifiers(<deferred>, , Map())
+    name: universe.TypeName = Foo
+    targs: List[universe.TypeDef] = List(type T)
+    low: universe.Tree = <empty>
+    high: universe.Tree = List[T]
 
 Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
 
@@ -1836,18 +1836,18 @@ Another form of type definition is a type alias:
 
     scala> val q"$mods type $name[..$args] = $tpt" = 
                q"type Foo[T] = List[T]"
-    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
-    name: reflect.runtime.universe.TypeName = Foo
-    args: List[reflect.runtime.universe.TypeDef] = List(type T)
-    tpt: reflect.runtime.universe.Tree = List[T]
+    mods: universe.Modifiers = Modifiers(, , Map())
+    name: universe.TypeName = Foo
+    args: List[universe.TypeDef] = List(type T)
+    tpt: universe.Tree = List[T]
 
 Due to low level uniform representation of type aliases and abstract types one matches another:
 
     scala> val q"$mods type $name[..$args] = $tpt" = q"type Foo[T] <: List[T]"
-    mods: reflect.runtime.universe.Modifiers = Modifiers(<deferred>, , Map())
-    name: reflect.runtime.universe.TypeName = Foo
-    args: List[reflect.runtime.universe.TypeDef] = List(type T)
-    tpt: reflect.runtime.universe.Tree =  <: List[T]
+    mods: universe.Modifiers = Modifiers(<deferred>, , Map())
+    name: universe.TypeName = Foo
+    args: List[universe.TypeDef] = List(type T)
+    tpt: universe.Tree =  <: List[T]
 
 Where `tpt` has a `TypeBoundsTree(low, high)` shape. 
 
