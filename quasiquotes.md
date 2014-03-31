@@ -755,7 +755,7 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 `q""` is used to indicate that some part of the tree is not provided by the user:
 
 1. Vals, Vars and Defs without right-hand side have it set to `q""`.
-2. Type definitions without bounds have them set to `q""`.
+2. Abstract type definitions without bounds have them set to `q""`.
 3. Try expressions without finally clause have it set to `q""`.
 4. Case clauses without guards have them set to `q""`.
 
@@ -871,7 +871,7 @@ Similarly for super we have:
 
 #### Application and Type Application {:#application}
 
-Value applications and type applications are two fundamental parts out of which one can construct function calls to Scala functions and methods. Lets assume that we would like to handle function calls to the following method:
+Value applications and type applications are two fundamental parts out of which one can construct calls to Scala functions and methods. Lets assume that we would like to handle function calls to the following method:
 
     def f[T](xs: T*): List[T] = xs.toList
 
@@ -915,7 +915,7 @@ Here we might get either one or two subsequent value applications:
     scala> val q"g(...$argss)" = q"g"
     argss: List[List[universe.Tree]] = List()
 
-Therefore it's recommended to use more specific patterns that check that extracted argss is not empty. 
+Therefore it's recommended to use more specific patterns that check that for example check that extracted argss is not empty. 
 
 Similarly to type arguments, implicit value arguments are automatically inferred during typechecking:
 
@@ -1479,6 +1479,18 @@ Here we can see that AnyRef is a parent that is inserted implicitly if we don't 
 
 #### Existential Type {:#existential-type}
 
+Existential types consist of a type tree and a list of definitions:
+
+    scala> val tq"$tpt forSome { ..$defns }" = tq"List[T] forSome { type T }"
+    tpt: reflect.runtime.universe.Tree = List[T]
+    defns: List[reflect.runtime.universe.MemberDef] = List(type T)
+
+Alternatively there is also an underscrore notation:
+
+    scala> val tq"$tpt forSome { ..$defns }" = tq"List[_]"
+    tpt: reflect.runtime.universe.Tree = List[_$1]
+    defns: List[reflect.runtime.universe.MemberDef] = List(<synthetic> type _$1)
+
 #### Tuple Type {:#tuple-type}
 
 [Similarly to expressions](#tuple-expr), tuple types are just a syntactic sugar over `TupleN` classes:
@@ -1614,13 +1626,13 @@ Similarly to [tuple expressions](#tuple-type) and [tuple types](#tuple-type), tu
 
 #### Modifiers {:#modifiers}
 
-Every definition except imports and package objects have associtated modifiers object which contains following data:
+Every definition except packages and package objects have associtated modifiers object which contains following data:
 
 1. `FlagSet`, a set of bits that charactarizes given definition.
 2. Private within name (e.g. `foo` in `private[foo] def f`)
 3. List of annotations
 
-Quasiquotes let you easily work with those fields through native support for `Modifiers`, `FlagSet` and annotation unquoting.
+Quasiquotes let you easily work with those fields through native support for `Modifiers`, `FlagSet` and annotation unquoting:
 
     scala> val f1 = q"${Modifiers(PRIVATE | IMPLICIT)} def f"
     f1: universe.DefDef = implicit private def f: scala.Unit
@@ -1631,7 +1643,7 @@ Quasiquotes let you easily work with those fields through native support for `Mo
     scala> val f3 = q"private implicit def f"
     f3: universe.DefDef = implicit private def f: scala.Unit
 
-All of those quasiquotes result into equivalent trees. It's also possible to combine unquoted flags with one provided inline in the source code but unquoted one should be given earlier:
+All of those quasiquotes result into equivalent trees. It's also possible to combine unquoted flags with one provided inline in the source code but unquoted one should be used before inline ones:
 
     scala> q"$PRIVATE implicit def foo"
     res10: universe.DefDef = implicit private def foo: scala.Unit
@@ -1641,16 +1653,16 @@ All of those quasiquotes result into equivalent trees. It's also possible to com
                   q"implicit $PRIVATE def foo"
                              ^
 
-To provide an annotation one need to unquote a new-shaped tree:
+To provide a definition annotation one need to unquote a new-shaped tree:
 
     scala> val annot = q"new foo(1)"
-    Foo: universe.Tree = new Foo(1)
+    annot: universe.Tree = new Foo(1)
 
     scala> val f4 = q"@$annot def f"
-    res9: universe.DefDef = @new foo(1) def f: scala.Unit
+    f4: universe.DefDef = @new foo(1) def f: scala.Unit
 
     scala> val f5 = q"@foo(1) def f"
-    res8: universe.DefDef = @new foo(1) def f: scala.Unit
+    f5: universe.DefDef = @new foo(1) def f: scala.Unit
 
 In deconstruction one can either extract `Modifiers` or annotations, but you can't extract flags separatly:
 
@@ -1804,11 +1816,44 @@ Simiarly one can also construct a mutable pattern definition:
 
     q"$mods var $pat: $tpt = $rhs"
 
+#### Type Definition {:#type-def}
+
+Type definition have two possible shapes: abstract type definitions and alias type definitions. 
+
+Abstract type definitions have the following shape:
+
+    scala> val q"$mods type $name[..$targs] >: $low <: $high" =
+               q"type Foo[T] <: List[T]"
+    mods: reflect.runtime.universe.Modifiers = Modifiers(<deferred>, , Map())
+    name: reflect.runtime.universe.TypeName = Foo
+    targs: List[reflect.runtime.universe.TypeDef] = List(type T)
+    low: reflect.runtime.universe.Tree = <empty>
+    high: reflect.runtime.universe.Tree = List[T]
+
+Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
+
+Another form of type definition is a type alias:
+
+    scala> val q"$mods type $name[..$args] = $tpt" = 
+               q"type Foo[T] = List[T]"
+    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
+    name: reflect.runtime.universe.TypeName = Foo
+    args: List[reflect.runtime.universe.TypeDef] = List(type T)
+    tpt: reflect.runtime.universe.Tree = List[T]
+
+Due to low level uniform representation of type aliases and abstract types one matches another:
+
+    scala> val q"$mods type $name[..$args] = $tpt" = q"type Foo[T] <: List[T]"
+    mods: reflect.runtime.universe.Modifiers = Modifiers(<deferred>, , Map())
+    name: reflect.runtime.universe.TypeName = Foo
+    args: List[reflect.runtime.universe.TypeDef] = List(type T)
+    tpt: reflect.runtime.universe.Tree =  <: List[T]
+
+Where `tpt` has a `TypeBoundsTree(low, high)` shape. 
+
 #### Method Definition {:#method}
 
-#### Secondary Constructor {:#ctor}
-
-#### Type Definition {:#type-def}
+#### Secondary Constructor Definition {:#ctor}
 
 #### Class Definition {:#class}
 
