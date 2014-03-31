@@ -631,30 +631,6 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 
 ## Syntax overview {:#syntax-overview}
 
-### Abbreviations {:#abbrev}
-
-* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
-* `early: List[Tree]` where each element is early definition
-* `enums: List[Tree]` where each element is a for loop enumerator
-* `expr: Tree` that contains an expression
-* `exprs: List[Tree]` where each element is an expression
-* `exprss: List[List[Tree]]` where each element is an expression
-* `name: Name`
-* `params: List[Tree]` where each element is a parameter
-* `paramss: List[List[Tree]]` where each element is a parameter
-* `parents: List[Tree]` where each element is a parent
-* `pat: Tree` that contains a pattern
-* `pats: List[Tree]` where each element is a pattern
-* `self: Tree` that corresponds to self type definition
-* `sels: List[Tree]` where each element is an import selector
-* `stats: List[Tree]` where each element is an expression, definition or import
-* `tname: TermName`
-* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
-* `tpname: TypeName`
-* `tpt: Tree` that contains a type
-* `tpts: List[Tree]` where each element is a type
-* `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
-
 ### Expressions {:#exprs-summary}
 
                                         | Quasiquote                                                  | Type
@@ -745,6 +721,30 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  [Generator Enumerator](#for)        | `fq"$pat <- $expr"`         | Tree
  [Value Definition Enumerator](#for) | `fq"$pat = $expr"`          | Tree
  [Guard Enumerator](#for)            | `fq"if $expr"`              | Tree
+
+### Abbreviations {:#abbrev}
+
+* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
+* `early: List[Tree]` where each element is early definition
+* `enums: List[Tree]` where each element is a for loop enumerator
+* `expr: Tree` that contains an expression
+* `exprs: List[Tree]` where each element is an expression
+* `exprss: List[List[Tree]]` where each element is an expression
+* `name: Name`
+* `params: List[Tree]` where each element is a parameter
+* `paramss: List[List[Tree]]` where each element is a parameter
+* `parents: List[Tree]` where each element is a parent
+* `pat: Tree` that contains a pattern
+* `pats: List[Tree]` where each element is a pattern
+* `self: Tree` that corresponds to self type definition
+* `sels: List[Tree]` where each element is an import selector
+* `stats: List[Tree]` where each element is an expression, definition or import
+* `tname: TermName`
+* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
+* `tpname: TypeName`
+* `tpt: Tree` that contains a type
+* `tpts: List[Tree]` where each element is a type
+* `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
 
 ## Syntax details {:#syntax-details} 
 
