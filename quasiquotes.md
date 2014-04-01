@@ -495,6 +495,8 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
+## Typed vs untyped trees 
+
 ## Use cases {:#use-cases}
 
 ### AST manipulation in macros and compiler plugins {:#ast-manipulation}
@@ -552,54 +554,6 @@ You don't have to manually wrap return value of a macro into `c.Expr` or specify
 
 Quasiquotes can also be used as is in compiler plugins as reflection api is strict subset of compiler's `Global` api. 
 
-### DSLs {:#dsls}
-
-Thanks to untyped nature of quasiquotes and rich Scala syntax one can define their own domain specific languages with the help of it:
-
-    import universe._
-
-    val config = Config(q"""
-      endpoint {
-        listen      = 80
-        server_name = "domain.com"
-        redirect_to = "www.domain.com"
-      }
-      endpoint {
-        listen      = 80
-        server_name = "www.domain.com"
-        root        = "/home/domain.com"
-      }
-    """)
-
-Where config constructor would just interprete code snippet with the help of patten matching:
-
-    import universe._
-
-    final case class Endpoint(props: Map[String, Any])
-    final case class Config(endpoints: List[Endpoint])
-    object Config {
-      def incorrect(msg: String, tree: Tree): Nothing =
-        throw new IllegalArgumentException(s"incorrect $msg: ${showCode(tree)}")
-      implicit val unliftEndpoint = Unliftable[Endpoint] {
-        case q"endpoint { ..$props }" =>
-          Endpoint(props.map { 
-            case q"${name: Name} = ${value: Int}" =>
-              (name.toString, value)
-            case q"${name: Name} = ${value: String}" =>
-              (name.toString, value)
-            case prop =>
-              incorrect("property definition", prop)
-          }.toMap)
-        case endpoint =>
-          incorrect("endpoint definition", endpoint)
-      }
-      def apply(config: Tree): Config = config match {
-        case q"..${endpoints: List[Endpoint]}" => Config(endpoints) 
-      }
-    }
-
-It's also possible to pass such definition as string and use `ToolBox` to parse it into a tree.    
-
 ### Just in time compilation 
 
 Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
@@ -624,8 +578,6 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
       }
       saveToFile("myfile.scala", generateCode())
     }
-
-## Typed vs untyped trees 
 
 ## Syntax overview {:#syntax-overview}
 
