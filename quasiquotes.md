@@ -11,7 +11,7 @@ title: Quasiquote guide (WIP)
 
 Before you start reading this guide it's recommended to start a Scala REPL with one extra line:
 
-    scala> val universe = universe; import universe._
+    scala> val universe = reflect.runtime.universe; import universe._
 
 REPL is the best place to explore quasiquotes and this guide will use it extensively to demonstrate handling of trees. All of the examples will assume that import.
 
@@ -633,35 +633,35 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 
 ### Expressions {:#exprs-summary}
 
-                                        | Quasiquote                                                  | Type
-----------------------------------------|-------------------------------------------------------------|-------------------------
- [Empty](#empty-expr)                   | `q""`                                                       | EmptyTree
- [Literal](#literal)                    | `q"$value"`                                                 | Literal
- [Identifier](#term-ref)                | `q"$tname"` or `q"name"`                                    | Ident
- [Selection](#term-ref)                 | `q"$expr.$tname"`                                           | Select
- [Super Selection](#super-this)         | `q"$tpname.super[$tpname].$tname"`                          | Select
- [This](#super-this)                    | `q"$tpname.this"`                                           | This
- [Application](#application)            | `q"$expr(...$exprss)"`                                      | Apply
- [Type Application] (#application)      | `q"$expr[..$tpts]"`                                         | TypeApply
- [Assign](#assign-update)               | `q"$expr = $expr"`                                          | Assign, AssignOrNamedArg
- [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                | Tree
- [Return](#return)                      | `q"return $expr"`                                           | Return
- [Throw](#throw)                        | `q"throw $expr"`                                            | Throw
- [Ascription](#ascription)              | `q"$expr: $tpt"`                                            | Typed
- [Annotated](#annotated-expr)           | `q"$expr: @$annot"`                                         | Annotated
- [Tuple](#tuple-expr)                   | `q"(..$exprs)"`                                             | Tree
- [Block](#block)                        | `q"{ ..$stats }"`                                           | Block
- [If](#if)                              | `q"if ($expr) $expr else $expr"`                            | If
- [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                          | Match
- [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`        | Try
- [Function](#function-expr)             | `q"(..$params) => $expr"`                                   | Function
- [Partial Function](#partial-function)  | `q"{ case ..$cases }"`                                      | Match
- [While Loop](#while)                   | `q"while ($expr) $expr"`                                    | LabelDef 
- [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                 | LabelDef
- [For Loop](#for)                       | `q"for (..$enums) $expr"`                                   | Tree
- [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                             | Tree
- [New](#new)                            | `q"new { ..$early } with ..$parents { $self => ..$stats }"` | Tree
- [XML Literal](#xml)                    | Not natively supported                                      | Tree
+                                        | Quasiquote                                                       | Type
+----------------------------------------|------------------------------------------------------------------|-------------------------
+ [Empty](#empty-expr)                   | `q""`                                                            | EmptyTree
+ [Literal](#literal)                    | `q"$value"`                                                      | Literal
+ [Identifier](#term-ref)                | `q"$tname"` or `q"name"`                                         | Ident
+ [Selection](#term-ref)                 | `q"$expr.$tname"`                                                | Select
+ [Super Selection](#super-this)         | `q"$tpname.super[$tpname].$tname"`                               | Select
+ [This](#super-this)                    | `q"$tpname.this"`                                                | This
+ [Application](#application)            | `q"$expr(...$exprss)"`                                           | Apply
+ [Type Application] (#application)      | `q"$expr[..$tpts]"`                                              | TypeApply
+ [Assign](#assign-update)               | `q"$expr = $expr"`                                               | Assign, AssignOrNamedArg
+ [Update](#assign-update)               | `q"$expr(..$exprs) = $expr"`                                     | Tree
+ [Return](#return)                      | `q"return $expr"`                                                | Return
+ [Throw](#throw)                        | `q"throw $expr"`                                                 | Throw
+ [Ascription](#ascription)              | `q"$expr: $tpt"`                                                 | Typed
+ [Annotated](#annotated-expr)           | `q"$expr: @$annot"`                                              | Annotated
+ [Tuple](#tuple-expr)                   | `q"(..$exprs)"`                                                  | Tree
+ [Block](#block)                        | `q"{ ..$stats }"`                                                | Block
+ [If](#if)                              | `q"if ($expr) $expr else $expr"`                                 | If
+ [Pattern Match](#match)                | `q"$expr match { case ..$cases }"`                               | Match
+ [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`             | Try
+ [Function](#function-expr)             | `q"(..$params) => $expr"`                                        | Function
+ [Partial Function](#partial-function)  | `q"{ case ..$cases }"`                                           | Match
+ [While Loop](#while)                   | `q"while ($expr) $expr"`                                         | LabelDef 
+ [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                      | LabelDef
+ [For Loop](#for)                       | `q"for (..$enums) $expr"`                                        | Tree
+ [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                                  | Tree
+ [New](#new)                            | `q"new { ..$earlydefns } with ..$parents { $self => ..$stats }"` | Tree
+ [XML Literal](#xml)                    | Not natively supported                                           | Tree
 
 ### Types {:#types-summary}
 
@@ -697,20 +697,20 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  
 ### Definitions {:#defns-summary}
 
-                                   | Quasiquote                                                                                                           | Type 
------------------------------------|----------------------------------------------------------------------------------------------------------------------|-----------
- [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                   | ValDef
- [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                   | ValDef
- [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                    | Tree
- [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                    | Tree
- [Method](#method)                 | `q"$mods def $tname[..$targs](...$paramss): $tpt = $expr"`                                                           | DefDef
- [Secondary Constructor](#ctor)    | `q"$mods def this(...$paramss) = this(..$argss)"`                                                                    | DefDef
- [Type](#type-def)                 | `q"$mods type $tpname[..$targs] = $tpt"`                                                                             | TypeDef
- [Class](#class)                   | `q"$mods class $tpname[..$targs] $ctorMods(...$paramss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
- [Trait](#trait)                   | `q"$mods trait $tpname[..$targs] extends { ..$early } with ..$parents { $self => ..$stats }"`                        | TraitDef
- [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                   | ModuleDef
- [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                    | PackageDef
- [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                                | PackageDef
+                                   | Quasiquote                                                                                                             | Type 
+-----------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------
+ [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                     | ValDef
+ [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                     | ValDef
+ [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                      | Tree
+ [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                      | Tree
+ [Method](#method)                 | `q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr"`                                                           | DefDef
+ [Secondary Constructor](#ctor)    | `q"$mods def this(...$paramss) = this(..$argss)"`                                                                      | DefDef
+ [Type](#type-def)                 | `q"$mods type $tpname[..$tparams] = $tpt"`                                                                             | TypeDef
+ [Class](#class)                   | `q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
+ [Trait](#trait)                   | `q"$mods trait $tpname[..$tparams] extends { ..$early } with ..$parents { $self => ..$stats }"`                        | TraitDef
+ [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                     | ModuleDef
+ [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                      | PackageDef
+ [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                                  | PackageDef
 
 ### Auxiliary {:#aux-summary}
 
@@ -724,27 +724,25 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 
 ### Abbreviations {:#abbrev}
 
-* `defns: List[Tree]` where each element is Val, Var, Def or Type definition 
-* `early: List[Tree]` where each element is early definition
-* `enums: List[Tree]` where each element is a for loop enumerator
-* `expr: Tree` that contains an expression
-* `exprs: List[Tree]` where each element is an expression
-* `exprss: List[List[Tree]]` where each element is an expression
-* `name: Name`
-* `params: List[Tree]` where each element is a parameter
-* `paramss: List[List[Tree]]` where each element is a parameter
-* `parents: List[Tree]` where each element is a parent
-* `pat: Tree` that contains a pattern
-* `pats: List[Tree]` where each element is a pattern
-* `self: Tree` that corresponds to self type definition
-* `sels: List[Tree]` where each element is an import selector
-* `stats: List[Tree]` where each element is an expression, definition or import
-* `tname: TermName`
-* `topstats: List[Tree]` where each element is Class, Trait, Object or Package definition
-* `tpname: TypeName`
-* `tpt: Tree` that contains a type
-* `tpts: List[Tree]` where each element is a type
+Prefixes of unquotees imply the following:
+
+* `name: Name`, `tname: TermName`, `tpname: TypeName`
 * `value: T` where `T` is value type that corresponds to given literal (e.g. `Int`, `Char`, `Float` etc)
+* `expr: Tree` an [expression tree](#exprs-summary)
+* `tpt: Tree` a [type tree](#types-summary)
+* `pat: Tree` a [pattern tree](#pats-summary)
+* `defn: Tree` a [definition tree](#defns-summary)
+* `earlydefn: Tree` an early definion tree ([val](#val-var) or [type definition](#type-def))
+* `self: Tree` a self definition tree (i.e. [val definition](#val-var))
+* `stat: Tree` a statement tree ([definition](#defns-summary), [expression](#exprs-summary) on an [import](#import))
+* `topstat: Tree` a top-level statement tree ([class](#class), [trait](#trait), [package](#package) or [import](#import))
+* `enum: Tree` a [for loop](#for) enumerator
+* `param: Tree` a value parameter tree (i.e. [val definition](#val-var))
+* `tparam: Tree` a type paremeter tree (i.e. [type definition](#type-def))
+* `parent: Tree` a [template](#template) parent
+* `sel: Tree` an [import](#import) selector tree
+
+Whenever a name has suffix `s` it means that it is a List of something. `ss` means List of Lists. So for example `exprss` means a List of Lists of expressions. 
 
 ## Syntax details {:#syntax-details} 
 
@@ -1680,7 +1678,7 @@ Considering the fact that definitions might contain various low-level flags adde
 
 Templates are a common abstraction in definition trees that is used in new expressions, classes, traits, objects, package objects. Although there is no interpolator for it at the moment we can illustrate its structure on the example of new expression (similar handling will applly to all other template-bearing trees):
 
-    q"new { ..$early } with ..$parents { $self => ..$stats }"
+    q"new { ..$earlydefns } with ..$parents { $self => ..$stats }"
 
 So template consists of:
 
@@ -1689,8 +1687,8 @@ So template consists of:
         scala> val withx = q"new { val x = 1 } with RequiresX"
         withx: universe.Tree = ...
 
-        scala> val q"new { ..$early } with RequiresX" = withx
-        early: List[universe.Tree] = List(val x = 1)
+        scala> val q"new { ..$earlydefns } with RequiresX" = withx
+        earlydefns: List[universe.Tree] = List(val x = 1)
  
 2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
 
@@ -1822,15 +1820,15 @@ Type definition have two possible shapes: abstract type definitions and alias ty
 
 Abstract type definitions have the following shape:
 
-    scala> val q"$mods type $name[..$targs] >: $low <: $high" =
+    scala> val q"$mods type $name[..$tparams] >: $low <: $high" =
                q"type Foo[T] <: List[T]"
     mods: universe.Modifiers = Modifiers(<deferred>, , Map())
     name: universe.TypeName = Foo
-    targs: List[universe.TypeDef] = List(type T)
+    tparams: List[universe.TypeDef] = List(type T)
     low: universe.Tree = <empty>
     high: universe.Tree = List[T]
 
-Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
+Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type parameters is a type definition iteself.  
 
 Another form of type definition is a type alias:
 
@@ -1853,7 +1851,54 @@ Where `tpt` has a `TypeBoundsTree(low, high)` shape.
 
 #### Method Definition {:#method}
 
+Each method consists of modifiers, name, type arguments, value arguments, return type and a body:
+
+    scala> val q"$mods def $name[..$tparams](...$paramss): $tpt = $body" = q"def f = 1"
+    mods: universe.Modifiers = Modifiers(, , Map())
+    name: universe.TermName = f
+    tparams: List[universe.TypeDef] = List()
+    paramss: List[List[universe.ValDef]] = List()
+    tpt: universe.Tree = <type ?>
+    body: universe.Tree = 1
+
+Type arguments are [type definitions](#type-def) and value arguments are [val definitions](#val-var). Inferred return type is represented as [empty type](#empty-type). If body of the method is [empty expression](#empty-expr) it means that method is abstract.
+
+Alternatively you can also deconstruct arguments separating implicit and non-implicit parameters:
+
+    scala> val q"def g(...$paramss)(implicit ..$implparams) = $body" =
+               q"def g(x: Int)(implicit y: Int) = x + y"
+    paramss: List[List[universe.ValDef]] = List(List(val x: Int = _))
+    implparams: List[universe.ValDef] = List(implicit val y: Int = _)
+    body: universe.Tree = x.$plus(y)
+
+This way of parameter handling will still work if method doesn\'t have any implicit parameters and `implparams` will get extracted as an empty list:
+
+    scala> val q"def g(...$paramss)(implicit ..$implparams) = $rhs" =
+               q"def g(x: Int)(y: Int) = x + y"
+    paramss: List[List[universe.ValDef]] = List(List(val x: Int = _), List(val y: Int = _))
+    implparams: List[universe.ValDef] = List()
+    body: universe.Tree = x.$plus(y)
+
 #### Secondary Constructor Definition {:#ctor}
+
+Secondary constructors are special kinds of methods that have following shape:
+
+    scala> val q"$mods def this(...$paramss) = this(...$argss)" =
+               q"def this() = this(0)"
+    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
+    paramss: List[List[reflect.runtime.universe.ValDef]] = List(List())
+    argss: List[List[reflect.runtime.universe.Tree]] = List(List(0))
+
+Due to low level underlying representation of trees secondary constructors are represented as special kind of method with `termNames.CONSTRUCTOR` name:
+
+    scala> val q"$mods def $name[..$tparams](...$paramss): $tpt = $body"
+             = q"def this() = this(0)"
+    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
+    name: reflect.runtime.universe.TermName = <init>
+    tparams: List[reflect.runtime.universe.TypeDef] = List()
+    paramss: List[List[reflect.runtime.universe.ValDef]] = List(List())
+    tpt: reflect.runtime.universe.Tree = <type ?>
+    body: reflect.runtime.universe.Tree = <init>(0)
 
 #### Class Definition {:#class}
 
