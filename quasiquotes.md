@@ -627,8 +627,6 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
 
 ## Typed vs untyped trees 
 
-## Quasiquotes vs reify {:#quasiquotes-vs-reify}
-
 ## Syntax overview {:#syntax-overview}
 
 ### Expressions {:#exprs-summary}
@@ -697,20 +695,20 @@ Thanks to new `showRaw` pretty printer one can implement offline code generator 
  
 ### Definitions {:#defns-summary}
 
-                                   | Quasiquote                                                                                                             | Type 
------------------------------------|------------------------------------------------------------------------------------------------------------------------|-----------
- [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                     | ValDef
- [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                     | ValDef
- [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                      | Tree
- [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                      | Tree
- [Method](#method)                 | `q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr"`                                                           | DefDef
- [Secondary Constructor](#ctor)    | `q"$mods def this(...$paramss) = this(..$argss)"`                                                                      | DefDef
- [Type](#type-def)                 | `q"$mods type $tpname[..$tparams] = $tpt"`                                                                             | TypeDef
- [Class](#class)                   | `q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$early } with ..$parents { $self => ..$stats }"` | ClassDef
- [Trait](#trait)                   | `q"$mods trait $tpname[..$tparams] extends { ..$early } with ..$parents { $self => ..$stats }"`                        | TraitDef
- [Object](#object)                 | `q"$mods object $tname extends { ..$early } with ..$parents { $self => ..$body }"`                                     | ModuleDef
- [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                      | PackageDef
- [Package Object](#package-object) | `q"package object $tname extends { ..$early } with ..$parents { $self => ..$stats }"`                                  | PackageDef
+                                   | Quasiquote                                                                                                                  | Type 
+-----------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-----------
+ [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                          | ValDef
+ [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                          | ValDef
+ [Val Pattern](#pattern-def)       | `q"$mods val $pat: $tpt = $expr"`                                                                                           | Tree
+ [Var Pattern](#pattern-def)       | `q"$mods var $pat: $tpt = $expr"`                                                                                           | Tree
+ [Method](#method)                 | `q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr"`                                                                | DefDef
+ [Secondary Constructor](#ctor)    | `q"$mods def this(...$paramss) = this(..$argss)"`                                                                           | DefDef
+ [Type](#type-def)                 | `q"$mods type $tpname[..$tparams] = $tpt"`                                                                                  | TypeDef
+ [Class](#class)                   | `q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"` | ClassDef
+ [Trait](#trait)                   | `q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"`                        | TraitDef
+ [Object](#object)                 | `q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }"`                                     | ModuleDef
+ [Package](#package)               | `q"package $ref { ..$topstats }"`                                                                                           | PackageDef
+ [Package Object](#package-object) | `q"package object $tname extends { ..$earlydefns } with ..$parents { $self => ..$stats }"`                                  | PackageDef
 
 ### Auxiliary {:#aux-summary}
 
@@ -1828,7 +1826,7 @@ Abstract type definitions have the following shape:
     low: universe.Tree = <empty>
     high: universe.Tree = List[T]
 
-    Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
+Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
 
 Another form of type definition is a type alias:
 
@@ -1900,12 +1898,39 @@ Due to low level underlying representation of trees secondary constructors are r
     tpt: reflect.runtime.universe.Tree = <type ?>
     body: reflect.runtime.universe.Tree = <init>(0)
 
-
 #### Class Definition {:#class}
+
+Classes have a following structure:
+
+    q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+
+As you probably already see the right part after extends is just a [template](#template). Apart from it and modifiers classes
+also have primary constructor which consists of constructor modifiers, type and value parameters which behave very much like
+[method](#method) modifiers and parameters.
 
 #### Trait Definition {:#trait}
 
+Syntactically traits are quite similar to [classes](#class) sans value parameters and constructor modifiers:
+
+     q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+
+An important difference in handling is caused by [SI-8399](https://issues.scala-lang.org/browse/SI-8399?filter=12305): due to INTERFACE flag that is set for traits with only abstract
+members trait pattern might not match:
+
+    scala> val q"trait $name { ..$stats }" = q"trait X { def x: Int }"
+    scala.MatchError: ... 
+
+A workaround it to always extract modifiers with wildcard pattern:
+
+    scala> val q"$_ trait $name { ..$stats }" = q"trait X { def x: Int }"
+    name: reflect.runtime.universe.TypeName = X
+    stats: List[reflect.runtime.universe.Tree] = List(def x: Int)
+
 #### Object Definition {:#object}
+
+Syntactically objects are quite similar [classes](#class) without constructors:
+
+    q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
 
 #### Package Definition {:#package}
 
@@ -1936,6 +1961,35 @@ Quasiquotes don\'t support inline package definition syntax that are usually use
 header of the source file (but it's equivalent to the supported one in terms of ASTs).
 
 #### Package Object Definition{:#package-object}
+
+Package objects are a cross between packages and object:
+
+    q"package object $tname extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+
+All of the handling properties are equivalent to those of objects apart from the fact that they don\'t have [modifiers](#modifiers).
+
+Even though package and regular objects seem to be quite similar syntactically they don't match one another:
+
+    scala> val q"$mods object $name" = q"package object O"
+    scala.MatchError: ...
+
+    scala> val q"package object $name" = q"object O"
+    scala.MatchError: ...
+
+Internally they get represtend as an object nested into package with given name:
+
+    scala> val P = q"package object P"
+    P: reflect.runtime.universe.PackageDef =
+    package P {
+      object `package` extends scala.AnyRef {
+        def <init>() = {
+          super.<init>();
+          ()
+        }
+      }
+    }
+
+This also means that you can match package object as a package.
 
 ### Auxiliary
 
