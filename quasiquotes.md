@@ -1828,7 +1828,7 @@ Abstract type definitions have the following shape:
     low: universe.Tree = <empty>
     high: universe.Tree = List[T]
 
-Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type parameters is a type definition iteself.  
+    Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
 
 Another form of type definition is a type alias:
 
@@ -1900,6 +1900,7 @@ Due to low level underlying representation of trees secondary constructors are r
     tpt: reflect.runtime.universe.Tree = <type ?>
     body: reflect.runtime.universe.Tree = <init>(0)
 
+
 #### Class Definition {:#class}
 
 #### Trait Definition {:#trait}
@@ -1942,15 +1943,15 @@ header of the source file (but it's equivalent to the supported one in terms of 
 
 Import trees consist of reference and a list of selectors:
 
-    scala> val q"import $ref.{..$sels}" = q"import foo.{bar, baz => boo, poision => _, _}"
+    scala> val q"import $ref.{..$sels}" = q"import foo.{bar, baz => boo, poison => _, _}"
     ref: universe.Tree = foo
-    sels: List[universe.Tree] = List((bar @ _), $minus$greater((baz @ _), (boo @ _)), $minus$greater((poision @ _), _), _)
+    sels: List[universe.Tree] = List((bar @ _), $minus$greater((baz @ _), (boo @ _)), $minus$greater((poison @ _), _), _)
 
 Selectors are extracted as pattern trees which are syntactically similar to selectors:
 
 1. Simple identifier selectors are represented as pattern bindings: `pq"bar"`
 2. Renaming selectors are represented as thin arrow patterns: `pq"baz -> boo"`
-3. Unimport selectors are represented as thin arrows with wildcard right hand side: `pq"poision -> _"`
+3. Unimport selectors are represented as thin arrows with wildcard right hand side: `pq"poison -> _"`
 4. Wildcard selector is represented as wildcard pattern: `pq"_"`
 
 Similarly one construct imports back from a programmatically created list of selectors:
