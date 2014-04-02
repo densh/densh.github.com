@@ -539,8 +539,6 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
-## Typed vs untyped trees
-
 ## Use cases {:#use-cases}
 
 ### AST manipulation in macros and compiler plugins {:#ast-manipulation}
