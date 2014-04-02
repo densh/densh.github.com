@@ -270,17 +270,17 @@ And wrapper will be resolved to `example.Test.wrapper` rather than intended `exa
 What hygiene in the narrow sense means is that quasiquotes shouldn't mess with the bindings of trees that are unquoted into them. For example, if a macro argument unquoted into a macro expansion was originally referring to some variable in enclosing lexical context, then this reference should remain in force after macro expansion, regardless of what code was generated for the macro expansion. Unfortunately, we don't have automatic facilities to ensure this, and that can lead to unexpected situations:
 
     scala> val originalTree = q"val x = 1; x"
-    originalTree: reflect.runtime.universe.Tree = ...
+    originalTree: universe.Tree = ...
 
     scala> toolbox.eval(originalTree)
     res1: Any = 1
 
     scala> val q"$originalDefn; $originalRef" = originalTree
-    originalDefn: reflect.runtime.universe.Tree = val x = 1
-    originalRef: reflect.runtime.universe.Tree = x
+    originalDefn: universe.Tree = val x = 1
+    originalRef: universe.Tree = x
 
     scala> val generatedTree = q"$originalDefn; { val x = 2; println(x); $originalRef }"
-    generatedTree: reflect.runtime.universe.Tree = ...
+    generatedTree: universe.Tree = ...
 
     scala> toolbox.eval(generatedTree)
     2
@@ -292,11 +292,11 @@ To avoid these issues, there's a battle-tested workaround from the times of earl
 
 There's a bit of a mixup in our API, though. There is an internal API `internal.reificationSupport.freshTermName/freshTypeName` available in both compile-time and runtime universes, however only at compile-time there's a pretty public facade for it, called `c.freshName`. We plan to fix this in Scala 2.12.
 
-    scala> val xfresh = reflect.runtime.universe.internal.reificationSupport.freshTermName("x$")
-    xfresh: reflect.runtime.universe.TermName = x$1
+    scala> val xfresh = universe.internal.reificationSupport.freshTermName("x$")
+    xfresh: universe.TermName = x$1
 
     scala> val generatedTree = q"$originalDefn; { val $xfresh = 2; println($xfresh); $originalRef }"
-    generatedTree: reflect.runtime.universe.Tree = ...
+    generatedTree: universe.Tree = ...
 
     scala> toolbox.eval(generatedTree)
     2
@@ -1877,20 +1877,20 @@ Secondary constructors are special kinds of methods that have following shape:
 
     scala> val q"$mods def this(...$paramss) = this(...$argss)" =
                q"def this() = this(0)"
-    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
-    paramss: List[List[reflect.runtime.universe.ValDef]] = List(List())
-    argss: List[List[reflect.runtime.universe.Tree]] = List(List(0))
+    mods: universe.Modifiers = Modifiers(, , Map())
+    paramss: List[List[universe.ValDef]] = List(List())
+    argss: List[List[universe.Tree]] = List(List(0))
 
 Due to low level underlying representation of trees secondary constructors are represented as special kind of method with `termNames.CONSTRUCTOR` name:
 
     scala> val q"$mods def $name[..$tparams](...$paramss): $tpt = $body"
              = q"def this() = this(0)"
-    mods: reflect.runtime.universe.Modifiers = Modifiers(, , Map())
-    name: reflect.runtime.universe.TermName = <init>
-    tparams: List[reflect.runtime.universe.TypeDef] = List()
-    paramss: List[List[reflect.runtime.universe.ValDef]] = List(List())
-    tpt: reflect.runtime.universe.Tree = <type ?>
-    body: reflect.runtime.universe.Tree = <init>(0)
+    mods: universe.Modifiers = Modifiers(, , Map())
+    name: universe.TermName = <init>
+    tparams: List[universe.TypeDef] = List()
+    paramss: List[List[universe.ValDef]] = List(List())
+    tpt: universe.Tree = <type ?>
+    body: universe.Tree = <init>(0)
 
 #### Class Definition {:#class}
 
@@ -1917,8 +1917,8 @@ members trait pattern might not match:
 A workaround it to always extract modifiers with wildcard pattern:
 
     scala> val q"$_ trait $name { ..$stats }" = q"trait X { def x: Int }"
-    name: reflect.runtime.universe.TypeName = X
-    stats: List[reflect.runtime.universe.Tree] = List(def x: Int)
+    name: universe.TypeName = X
+    stats: List[universe.Tree] = List(def x: Int)
 
 #### Object Definition {:#object}
 
@@ -1973,7 +1973,7 @@ Even though package and regular objects seem to be quite similar syntactically t
 Internally they get represtend as an object nested into package with given name:
 
     scala> val P = q"package object P"
-    P: reflect.runtime.universe.PackageDef =
+    P: universe.PackageDef =
     package P {
       object `package` extends scala.AnyRef {
         def <init>() = {
