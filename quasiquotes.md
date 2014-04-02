@@ -566,7 +566,7 @@ Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
 
 ### Offline code generation 
 
-Thanks to new `showRaw` pretty printer one can implement offline code generator that does AST manipulation with the help of quasiquotes and then serializes into actual source right before writing them to disk:
+Thanks to new `showCode` pretty printer one can implement offline code generator that does AST manipulation with the help of quasiquotes and then serializes into actual source right before writing them to disk:
 
     object OfflineCodeGen extends App {
       def generateCode() =
