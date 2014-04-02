@@ -195,7 +195,9 @@ Sophisticated macro systems such as Racket's have mechanisms that make macros hy
 
 Preventing name clashes between regular and generated code means two things. First, we must ensure that regardless of the context in which we put generated code, its meaning isn't going to change (*referential transparency*). Second, we must make certain that regardless of the context in which we splice regular code, its meaning isn't going to change (often called *hygiene in the narrow sense*). Let's see what can be done to this end on a series of examples.
 
-1) What referential transparency means is that quasiquotes should remember the lexical context in which they are defined. For instance, if there are imports provided at the definition site of the quasiquote, then these imports should be used to resolve names in the quasiquote. Unfortunately, this is not the case at the moment, and here's an example:
+### Referential transparency {:#referential-transparency}
+
+What referential transparency means is that quasiquotes should remember the lexical context in which they are defined. For instance, if there are imports provided at the definition site of the quasiquote, then these imports should be used to resolve names in the quasiquote. Unfortunately, this is not the case at the moment, and here's an example:
 
     scala> import collection.mutable.Map
 
@@ -245,7 +247,7 @@ If we compile both macro and it's usage we'll see that `println` will not be cal
 
 And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid referential transparency gotchas one can use two possible workarounds:
 
-A. Fully qualify all references. i.e. we can adapt our macros' implementation to:
+1. Fully qualify all references. i.e. we can adapt our macros' implementation to:
 
        def impl(c: Context)(x: c.Tree) = {
          import c.universe._
@@ -254,7 +256,7 @@ A. Fully qualify all references. i.e. we can adapt our macros' implementation to
 
    It's important to start with `_root_` as otherwise there will still be a chance of name collision if `example` gets redefined at use-site of the macro.
 
-B. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
+2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
 
        def impl(c: Context)(x: c.Tree) = {
          import c.universe._
@@ -263,7 +265,9 @@ B. Unquote symbols instead of using plain identifiers. i.e. we can resolve refer
          q"$wrapper($x)"
        }
 
-2) What hygiene in the narrow sense means is that quasiquotes shouldn't mess with the bindings of trees that are unquoted into them. For example, if a macro argument unquoted into a macro expansion was originally referring to some variable in enclosing lexical context, then this reference should remain in force after macro expansion, regardless of what code was generated for the macro expansion. Unfortunately, we don't have automatic facilities to ensure this, and that can lead to unexpected situations:
+### Hygiene in the narrow sense {:#hygiene-in-the-narrow-sense}
+
+What hygiene in the narrow sense means is that quasiquotes shouldn't mess with the bindings of trees that are unquoted into them. For example, if a macro argument unquoted into a macro expansion was originally referring to some variable in enclosing lexical context, then this reference should remain in force after macro expansion, regardless of what code was generated for the macro expansion. Unfortunately, we don't have automatic facilities to ensure this, and that can lead to unexpected situations:
 
     scala> val originalTree = q"val x = 1; x"
     originalTree: reflect.runtime.universe.Tree = ...
@@ -284,7 +288,7 @@ B. Unquote symbols instead of using plain identifiers. i.e. we can resolve refer
 
 In the example the definition of `val x = 2` shadows the binding from `x` to `val x = 1` established in the original tree, changing the semantics of `originalRef` in generated code. In this simple example, shadowing is quite easy to follow, however in elaborate macros it can easy get out of hand.
 
-A. To avoid these issues, there's a battle-tested workaround from the times of early Lisp - having a function that creates unique names to be used in generated code. In Lisp parlance it's called gensym, whereas in Scala we call it freshName. Quasiquotes are particularly nice here, because they allow unquoting of generated names directly into generated code.
+To avoid these issues, there's a battle-tested workaround from the times of early Lisp - having a function that creates unique names to be used in generated code. In Lisp parlance it's called gensym, whereas in Scala we call it freshName. Quasiquotes are particularly nice here, because they allow unquoting of generated names directly into generated code.
 
 There's a bit of a mixup in our API, though. There is an internal API `internal.reificationSupport.freshTermName/freshTypeName` available in both compile-time and runtime universes, however only at compile-time there's a pretty public facade for it, called `c.freshName`. We plan to fix this in Scala 2.12.
 
