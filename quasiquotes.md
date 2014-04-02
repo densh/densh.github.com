@@ -1,5 +1,5 @@
 ---
-layout: page 
+layout: page
 title: Quasiquote guide (WIP)
 ---
 
@@ -7,7 +7,7 @@ title: Quasiquote guide (WIP)
 * Table of contents.
 {:toc}
 
-## Before you start {:#before-you-start} 
+## Before you start {:#before-you-start}
 
 Before you start reading this guide it's recommended to start a Scala REPL with one extra line:
 
@@ -49,7 +49,7 @@ Quasiquotes are a neat notation that lets you manipulate Scala syntax trees with
     scala> val tree = q"i am { a quasiquote }"
     tree: universe.Tree = i.am(a.quasiquote)
 
-Every time you wrap a snippet of code into `q"..."` quotation it would become a tree that represents given snippet. As you might have already noticed quotation syntax is in just another usage of extensible string interpolation introduced in 2.10. Although they look like strings they operate on syntactic trees under the hood. 
+Every time you wrap a snippet of code into `q"..."` quotation it would become a tree that represents given snippet. As you might have already noticed quotation syntax is in just another usage of extensible string interpolation introduced in 2.10. Although they look like strings they operate on syntactic trees under the hood.
 
 The same syntax can be used to match trees as patterns:
 
@@ -81,7 +81,7 @@ Similarly one can structurally deconstruct a tree using unquoting in pattern mat
 Scala is the language with rich syntax that differs greatly depending on the syntactical context:
 
     scala> val x = q"""
-             val x: List[Int] = List(1, 2) match { 
+             val x: List[Int] = List(1, 2) match {
                case List(a, b) => List(a + b)
              }
            """
@@ -98,7 +98,7 @@ In this example we see three primary contexts being used:
 
 Each of this contexts is covered by separate interpolator:
 
-    | Used for 
+    | Used for
 ----|----------------------------------------------------------------
  q  | [expressions](#exprs-summary), [definitions](#defns-summary) and [imports](#import)
  tq | [types](#types-summary)
@@ -141,7 +141,7 @@ Unquote splicing is a way to unquote a variable number of elements:
     scala> val fab = q"f(..$ab)"
     fab: universe.Tree = f(a, b)
 
-Dots near unquotee annotate degree of flattenning and are also called splicing rank. `..$` expects argument to be an `Iterable[Tree]` and `...$` expects `Iterable[Iterable[Tree]]`. 
+Dots near unquotee annotate degree of flattenning and are also called splicing rank. `..$` expects argument to be an `Iterable[Tree]` and `...$` expects `Iterable[Iterable[Tree]]`.
 
 Splicing can be easily combined with regular unquotation:
 
@@ -187,9 +187,17 @@ So in general only one `..$` is allowed per given list. Similar restrictions als
 
 In this section we only worked with function arguments but the same splicing rules are true for all syntax forms with variable amount of elements. [Syntax overview](#syntax-overview) and corresponding [syntax details](#syntax-details) sections demonstrate how you can splice into other syntactic forms.
 
-## Referential transparency and hygiene {:#referential-transparency}
+## Hygiene {:#hygiene}
 
-In 2.11 quasiquotes are not referentially transparent meaning that they don\'t have any knowledge of lexical context around them. For example:
+The notion of hygiene has been widely popularized by macro research in Scheme. A code generator is called hygienic if it ensures absense of name clashes between regular and generated code, preventing accidental capture of identifiers. As numerous experience reports show, hygiene is of great importance to code generation, because name binding problems are often very non-obvious and lack of hygiene might manifest itself in subtle ways.
+
+Sophisticated macro systems such as Racket's have mechanisms that make macros hygienic without any effort from macro writers. In Scala we don't have automatic hygiene yet - both of our codegen facilities (compile-time codegen with macros and runtime codegen with toolboxes) require programmers to handle hygiene manually. Fixing this is our number one priority for 2.12 (see [future prospects](#future)), but in the meanwhile you need to know how to work around the absense of hygiene, which is what this section is about.
+
+Preventing name clashes between regular and generated code means two things. First, we must ensure that regardless of the context in which we put generated code, its meaning isn't going to change (*referential transparency*). Second, we must make certain that regardless of the context in which we splice regular code, its meaning isn't going to change (often called *hygiene in the narrow sense*). Let's see what can be done to this end on a series of examples.
+
+### Referential transparency {:#referential-transparency}
+
+What referential transparency means is that quasiquotes should remember the lexical context in which they are defined. For instance, if there are imports provided at the definition site of the quasiquote, then these imports should be used to resolve names in the quasiquote. Unfortunately, this is not the case at the moment, and here's an example:
 
     scala> import collection.mutable.Map
 
@@ -201,10 +209,8 @@ In 2.11 quasiquotes are not referentially transparent meaning that they don\'t h
 
     scala> typecheckType(tq"Map[_, _]") =:= typeOf[collection.immutable.Map[_, _]]
     true
-      
-Here we can see that plain reference to `Map` doesn\'t respect our custom import and resolves to default `collection.immutable.Map` instead. 
 
-Similar problems can arise if references aren't fully qualified in macros. Current macro system isn't hygienic and it doesn't resolve name clashes between result of the macro and lexical scope where macro is used:
+Here we can see that plain reference to `Map` doesn\'t respect our custom import and resolves to default `collection.immutable.Map` instead. Similar problems can arise if references aren't fully qualified in macros.
 
     // ---- MyMacro.scala ----
     package example
@@ -215,7 +221,8 @@ Similar problems can arise if references aren't fully qualified in macros. Curre
     object MyMacro {
       def wrapper(x: Int) = { println(s"wrapped x = $x"); x }
       def apply(x: Int): Int = macro impl
-      def impl(c: Context)(x: c.Tree) = { import c.universe._
+      def impl(c: Context)(x: c.Tree) = {
+        import c.universe._
         q"wrapper($x)"
       }
     }
@@ -224,7 +231,7 @@ Similar problems can arise if references aren't fully qualified in macros. Curre
     package example
 
     object Test extends App {
-      def wrapper(x: Int) = x 
+      def wrapper(x: Int) = x
       MyMacro(2)
     }
 
@@ -236,27 +243,64 @@ If we compile both macro and it's usage we'll see that `println` will not be cal
     object Test extends App {
       def wrapper(x: Int) = x
       wrapper(2)
-    }   
+    }
 
-And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid this kind of errors one can use two possible workarounds:
+And wrapper will be resolved to `example.Test.wrapper` rather than intended `example.MyMacro.wrapper`. To avoid referential transparency gotchas one can use two possible workarounds:
 
 1. Fully qualify all references. i.e. we can adapt our macros' implementation to:
 
-       def impl(c: Context)(x: c.Tree) = { import c.universe._
+       def impl(c: Context)(x: c.Tree) = {
+         import c.universe._
          q"_root_.example.MyMacro.wrapper($x)"
        }
 
-   It's important to start with `_root_` as otherwise there will still be a chance of name collision if `example` gets redefined at use-site of the macro. 
+   It's important to start with `_root_` as otherwise there will still be a chance of name collision if `example` gets redefined at use-site of the macro.
 
 2. Unquote symbols instead of using plain identifiers. i.e. we can resolve reference to wrapper by hand:
 
-       def impl(c: Context)(x: c.Tree) = { import c.universe._
+       def impl(c: Context)(x: c.Tree) = {
+         import c.universe._
          val myMacro = symbolOf[MyMacro.type].asClass.module
          val wrapper = myMacro.info.member(TermName("wrapper"))
          q"$wrapper($x)"
        }
 
-Fixing these issues is the number one priority for 2.12. (see [future prospects](#future))
+### Hygiene in the narrow sense {:#hygiene-in-the-narrow-sense}
+
+What hygiene in the narrow sense means is that quasiquotes shouldn't mess with the bindings of trees that are unquoted into them. For example, if a macro argument unquoted into a macro expansion was originally referring to some variable in enclosing lexical context, then this reference should remain in force after macro expansion, regardless of what code was generated for the macro expansion. Unfortunately, we don't have automatic facilities to ensure this, and that can lead to unexpected situations:
+
+    scala> val originalTree = q"val x = 1; x"
+    originalTree: reflect.runtime.universe.Tree = ...
+
+    scala> toolbox.eval(originalTree)
+    res1: Any = 1
+
+    scala> val q"$originalDefn; $originalRef" = originalTree
+    originalDefn: reflect.runtime.universe.Tree = val x = 1
+    originalRef: reflect.runtime.universe.Tree = x
+
+    scala> val generatedTree = q"$originalDefn; { val x = 2; println(x); $originalRef }"
+    generatedTree: reflect.runtime.universe.Tree = ...
+
+    scala> toolbox.eval(generatedTree)
+    2
+    res2: Any = 2
+
+In the example the definition of `val x = 2` shadows the binding from `x` to `val x = 1` established in the original tree, changing the semantics of `originalRef` in generated code. In this simple example, shadowing is quite easy to follow, however in elaborate macros it can easy get out of hand.
+
+To avoid these issues, there's a battle-tested workaround from the times of early Lisp - having a function that creates unique names to be used in generated code. In Lisp parlance it's called gensym, whereas in Scala we call it freshName. Quasiquotes are particularly nice here, because they allow unquoting of generated names directly into generated code.
+
+There's a bit of a mixup in our API, though. There is an internal API `internal.reificationSupport.freshTermName/freshTypeName` available in both compile-time and runtime universes, however only at compile-time there's a pretty public facade for it, called `c.freshName`. We plan to fix this in Scala 2.12.
+
+    scala> val xfresh = reflect.runtime.universe.internal.reificationSupport.freshTermName("x$")
+    xfresh: reflect.runtime.universe.TermName = x$1
+
+    scala> val generatedTree = q"$originalDefn; { val $xfresh = 2; println($xfresh); $originalRef }"
+    generatedTree: reflect.runtime.universe.Tree = ...
+
+    scala> toolbox.eval(generatedTree)
+    2
+    res2: Any = 1
 
 ## Lifting {:#lifting}
 
@@ -266,7 +310,7 @@ Lifting is and extensible way to unquote custom data types in quasiquotes. Its p
     two: Int = 2
 
     scala> val four = "$two + $two"
-    four: universe.Tree = 2.$plus(2)   
+    four: universe.Tree = 2.$plus(2)
 
 This code runs successfully because `Int` is considered to be `Liftable` by default. `Liftable` type is just a trait with a single absract method that defines a mapping of given type to tree:
 
@@ -288,7 +332,7 @@ One can also combine lifting and unquote splicing:
     scala> val f123456 = q"f(...$intss)"
     f123456: universe.Tree = f(1, 2, 3)(4, 5)(6)
 
-In this case each element of the list will be lifted separately and the result will be spliced right in. 
+In this case each element of the list will be lifted separately and the result will be spliced right in.
 
 ### Bring your own {:#bring-your-own-liftable}
 
@@ -296,12 +340,12 @@ To define tree representation for your own data type just provide an implicit in
 
     package points
 
-    import scala.universe._ 
+    import scala.universe._
 
     case class Point(x: Int, y: Int)
     object Point {
-      implicit val lift = Liftable[Point] { p => 
-        q"_root_.points.Point(${p.x}, ${p.y})" 
+      implicit val lift = Liftable[Point] { p =>
+        q"_root_.points.Point(${p.x}, ${p.y})"
       }
     }
 
@@ -309,7 +353,7 @@ This way whenever a value of Point type is unquoted in runtime quasiquote it wil
 into a case class constructor call. In this example there two important points to take into account:
 
 0. Liftable companion contains helper `apply` method to simplifies creation of `Liftable` instances.
-   It takes a single type parameter `T` and a `T => Tree` function as a single value parameter and 
+   It takes a single type parameter `T` and a `T => Tree` function as a single value parameter and
    returns a `Liftable[T]`.
 
 1. Here we only defined `Liftable` for runtime reflection. It won't be found if you try to
@@ -317,7 +361,7 @@ into a case class constructor call. In this example there two important points t
    compatible with the others. This problem is caused by path-dependant nature of current reflection
    api. (see [sharing liftable implementation between universes](#reusing-liftable-impl))
 
-2. Due to lack of [referential transparency](#referential-transparency), reference to point companion
+2. Due to lack of [hygiene](#hygiene), reference to point companion
    has to be fully qualified to ensure correctness in of this tree in every possible context. Another
    way to workaround reference issue is to use symbols to refer to things:
 
@@ -352,7 +396,7 @@ into a case class constructor call. In this example there two important points t
  `Type`                         | `typeOf[Int]`         | `TypeTree(typeof[Int])`
  `TypeTag`                      | `ttag`                | `TypeTree(ttag.tpe)`
  `Constant`                     | `const`               | `Literal(const)`
- 
+
  (\*) Liftable for tuples is defined for all `N` in `[2, 22]` range.
 
  (†) All type parameters have to be Liftable themselves.
@@ -390,13 +434,13 @@ Due to path dependent nature of current reflection API it isn't trivial to share
     }
 
 So in practice it's much easier to just define a liftable for given universe at hand:
-    
+
     import reflect.macros.blackbox.Context
-    
+
     // macro impls defined as a macro bundle
     class MyMacros(c: Context) {
       import c.universe._
- 
+
       implicit val liftPoint = Liftable[points.Point] { p =>
         q"_root_.points.Point(${p.x}, ${p.y})"
       }
@@ -447,10 +491,10 @@ Analogously to lifting it would unlift arguments of the function elementwise and
 Similarly to liftables one can define your own unliftables:
 
     package Points
- 
+
     import scala.universe._
 
-    case class Point(x: Int, y: Int) 
+    case class Point(x: Int, y: Int)
     object Point {
       implicit val unliftPoint = Unliftable[points.Point] {
         case q"_root_.points.Point(${x: Int}, ${y: Int})" => Point(x, y)
@@ -460,8 +504,8 @@ Similarly to liftables one can define your own unliftables:
 Here one needs to pay attention to a few nuances:
 
 0. Similarly to `Liftable`, `Unliftable` defines a helper `apply` function in companion
-   to simplify creation of `Unliftable` instances which takes a type parameter `T` and 
-   a partial function `PartialFunction[Tree, T]` and returns `Unliftable[T]`. At all 
+   to simplify creation of `Unliftable` instances which takes a type parameter `T` and
+   a partial function `PartialFunction[Tree, T]` and returns `Unliftable[T]`. At all
    inputs where partial function is defined it's expected to unconditionally return
    instance of `T`.
 
@@ -470,9 +514,9 @@ Here one needs to pay attention to a few nuances:
 
 2. Pattern used in this unliftable will only match fully qualified reference to Point that
    starts with `_root_`. It won't match other possible shapes of the reference and they have
-   to be specified by hand. This problem is caused by lack of [referential transparency](#referential-transparency).
+   to be specified by hand. This problem is caused by lack of [hygiene](#hygiene).
 
-3. The pattern will also only match trees that have literal `Int` arguments. 
+3. The pattern will also only match trees that have literal `Int` arguments.
    It won't work for other expressions that might evaluate to `Int`.
 
 ### Standard Unliftables {:#standard-unliftables}
@@ -495,7 +539,7 @@ Here one needs to pay attention to a few nuances:
 
  (\*) Unliftable for tuples is defined for all N in [2, 22] range. All type parameters have to be Unliftable themselves.
 
-## Typed vs untyped trees 
+## Typed vs untyped trees
 
 ## Use cases {:#use-cases}
 
@@ -519,7 +563,7 @@ Quasiquotes were designed primary as tool for ast manipulation in macros. Common
     // usage
     object Test extends App {
       def faulty: Int = throw new Exception
-      debug { 
+      debug {
         val x = 1
         val y = x + faulty
         x + y
@@ -541,7 +585,7 @@ To simplify integration with macros we've also made it easier to just use trees 
         c.Expr(q"$x + 1")
       }
     }
-    
+
     // in 2.11 you can also do it like that
     object Macro {
       def apply(x: Int): Int = macro impl
@@ -552,9 +596,9 @@ To simplify integration with macros we've also made it easier to just use trees 
 
 You don't have to manually wrap return value of a macro into `c.Expr` or specify argument types twice any more. Return type in `impl` is optional too. (see also [quasiquotes vs reify](#quasiquotes-vs-reify))
 
-Quasiquotes can also be used as is in compiler plugins as reflection api is strict subset of compiler's `Global` api. 
+Quasiquotes can also be used as is in compiler plugins as reflection api is strict subset of compiler's `Global` api.
 
-### Just in time compilation 
+### Just in time compilation
 
 Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
 
@@ -564,7 +608,7 @@ Thanks to `ToolBox` api one can generate, compile and run Scala code at runtime:
     compiled and run at runtime!
     result: Any = ()
 
-### Offline code generation 
+### Offline code generation
 
 Thanks to new `showCode` pretty printer one can implement offline code generator that does AST manipulation with the help of quasiquotes and then serializes into actual source right before writing them to disk:
 
@@ -606,7 +650,7 @@ Thanks to new `showCode` pretty printer one can implement offline code generator
  [Try](#try)                            | `q"try $expr catch { case ..$cases } finally $expr"`             | Try
  [Function](#function-expr)             | `q"(..$params) => $expr"`                                        | Function
  [Partial Function](#partial-function)  | `q"{ case ..$cases }"`                                           | Match
- [While Loop](#while)                   | `q"while ($expr) $expr"`                                         | LabelDef 
+ [While Loop](#while)                   | `q"while ($expr) $expr"`                                         | LabelDef
  [Do-While Loop](#while)                | `q"do $expr while ($expr)"`                                      | LabelDef
  [For Loop](#for)                       | `q"for (..$enums) $expr"`                                        | Tree
  [For-Yield Loop](#for)                 | `q"for (..$enums) yield $expr"`                                  | Tree
@@ -625,29 +669,29 @@ Thanks to new `showCode` pretty printer one can implement offline code generator
  [Super Type Selection](#type-projection) | `tq"$tpname.super[$tpname].$tpname"`  | Select
  [This Type Selection](#type-projection)  | `tq"this.$tpname"`                    | Select
  [Applied Type](#applied-type)            | `tq"$tpt[..$tpts]"`                   | AppliedTypeTree
- [Annotated Type](#annotated-type)        | `tq"$tpt @$annots"`                   | Annotated 
+ [Annotated Type](#annotated-type)        | `tq"$tpt @$annots"`                   | Annotated
  [Compound Type](#compound-type)          | `tq"..$parents { ..$defns }"`         | CompoundTypeTree
  [Existential Type](#existential-type)    | `tq"$tpt forSome { ..$defns }"`       | ExistentialTypeTree
  [Tuple Type](#tuple-type)                | `tq"(..$tpts)"`                       | Tree
  [Function Type](#function-type)          | `tq"(..$tpts) => $tpt"`               | Tree
 
 ### Patterns {:#pats-summary}
- 
-                                             | Quasiquote             | Type                    
+
+                                             | Quasiquote             | Type
 ---------------------------------------------|------------------------|-------------------
  [Wildcard Pattern](#wildcard-pattern)       | `pq"_"`                | Ident
  [Literal Pattern](#literal-pattern)         | `pq"$value"`           | Literal
  [Binding Pattern](#binding-pattern)         | `pq"$name @ $pat"`     | Bind
- [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply   
- [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed  
- [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative       
+ [Extractor Pattern](#extractor-pattern)     | `pq"$ref(..$pats)"`    | Apply, UnApply
+ [Type Pattern](#type-pattern)               | `pq"_: $tpt"`          | Typed
+ [Alternative Pattern](#alternative-pattern) | `pq"$first │ ..$rest"` | Alternative
  [Tuple Pattern](#tuple-pattern)             | `pq"(..$pats)"`        | Apply, UnApply
  [XML Pattern](#xml)                         | Not natively supported | Tree
- 
- 
+
+
 ### Definitions {:#defns-summary}
 
-                                   | Quasiquote                                                                                                                  | Type 
+                                   | Quasiquote                                                                                                                  | Type
 -----------------------------------|-----------------------------------------------------------------------------------------------------------------------------|-----------
  [Val](#val-var)                   | `q"$mods val $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                          | ValDef
  [Var](#val-var)                   | `q"$mods var $tname: $tpt = $expr"` or `q"$mods val $pat = $expr"`                                                          | ValDef
@@ -692,9 +736,9 @@ Prefixes of unquotees imply the following:
 * `parent: Tree` a [template](#template) parent
 * `sel: Tree` an [import](#import) selector tree
 
-Whenever a name has suffix `s` it means that it is a List of something. `ss` means List of Lists. So for example `exprss` means a List of Lists of expressions. 
+Whenever a name has suffix `s` it means that it is a List of something. `ss` means List of Lists. So for example `exprss` means a List of Lists of expressions.
 
-## Syntax details {:#syntax-details} 
+## Syntax details {:#syntax-details}
 
 ### Expressions
 
@@ -712,7 +756,7 @@ Default toString formats `q""` as `<empty>`.
 #### Literal {:#literal}
 
 Scala has a number of default built-in literals:
-    
+
     q"1", q"1L"              // integer literals
     q"1.0f", q"1.0", q"1.0d" // floating point literals
     q"true", q"false"        // boolean literals
@@ -746,7 +790,7 @@ During deconstruction you can use [unlifting](#unlifting) to extract values out 
     scala> val q"${x: Int}" = q"1"
     x: Int = 1
 
-Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables)) 
+Similarly it would work with all the literal types except `Null`. (see [standard unliftables](#standard-unliftables))
 
 #### Identifier and Selection {:#term-ref}
 
@@ -798,7 +842,7 @@ This tree supports following variations:
     scala> val q"$name.this" = q"foo.this"
     name: universe.TypeName = foov
 
-So plain `q"this"` is equivalent to `q"${tpnme.EMPTY}.this"`. 
+So plain `q"this"` is equivalent to `q"${tpnme.EMPTY}.this"`.
 
 Similarly for super we have:
 
@@ -826,7 +870,7 @@ Value applications and type applications are two fundamental parts out of which 
 It can be handled in the following way:
 
     scala> val apps = List(q"f[Int](1, 2)", q"f('a, 'b)")
-    scala> apps.foreach { 
+    scala> apps.foreach {
              case q"f[..$ts](..$args)" =>
                println(s"type arguments: $ts, value arguments: $args")
            }
@@ -842,7 +886,7 @@ It's recommended to always include type applications when you match on function 
              f(1, 2, 3)
            """)
     ts: List[universe.Tree] = List(Int)
-    args: List[universe.Tree] = List(1, 2, 3) 
+    args: List[universe.Tree] = List(1, 2, 3)
 
 Another important feature of scala method calls is multiple argument lists and implicit arguments:
 
@@ -863,7 +907,7 @@ Here we might get either one or two subsequent value applications:
     scala> val q"g(...$argss)" = q"g"
     argss: List[List[universe.Tree]] = List()
 
-Therefore it's recommended to use more specific patterns that check that for example check that extracted argss is not empty. 
+Therefore it's recommended to use more specific patterns that check that for example check that extracted argss is not empty.
 
 Similarly to type arguments, implicit value arguments are automatically inferred during typechecking:
 
@@ -891,20 +935,20 @@ Nevertheless quasiquotes let you deconstruct both of them uniformly according to
 
     scala> List(assign, update).foreach {
              case q"$left = $right" =>
-               println(s"left = $left, right = $right") 
+               println(s"left = $left, right = $right")
            }
     left = x, right = 2
     left = array(0), right = 1
 
-Where `array(0)` has the same AST as function application. 
+Where `array(0)` has the same AST as function application.
 
 On the other hand if you want to treat this two cases separately it's also possible with following more specific patterns:
 
-    scala> List(assign, update).foreach { 
+    scala> List(assign, update).foreach {
              case q"${ref: RefTree} = $expr" =>
                println(s"assign $expr to $ref")
              case q"$obj(..$args) = $expr" =>
-               println(s"update $obj at $args with $expr") 
+               println(s"update $obj at $args with $expr")
            }
     assign 2 to x
     update array at List(0) with 1
@@ -912,12 +956,12 @@ On the other hand if you want to treat this two cases separately it's also possi
 
 #### Return {:#return}
 
-Return expressions is used to perform early return from a function. 
+Return expressions is used to perform early return from a function.
 
     scala> val ret = q"return 2 + 2"
     ret: universe.Return = return 2.$plus(2)
 
-    scala> val q"return $expr" = ret 
+    scala> val q"return $expr" = ret
     expr: universe.Tree = 2.$plus(2)
 
 #### Throw {:#throw}
@@ -927,7 +971,7 @@ Throw expression is used to throw a throwable:
     scala> val thr = q"throw new Exception"
     thr: universe.Throw = throw new Exception()
 
-    scala> val q"throw $expr" = thr 
+    scala> val q"throw $expr" = thr
     expr: universe.Tree = new Exception()
 
 #### Ascription {:#ascription}
@@ -976,12 +1020,12 @@ At the moment tuples are only supported up to 22 arity but this is just an imple
     tuple 23 supported?: Boolean = false
 
 Despited the fact that `Tuple1` class exists there is no built-in syntax for it. Single parens around expression do not change its meaning:
- 
+
     scala> val inparens = q"(a)"
     inparens: universe.Ident = a
 
 It is also common to treat `Unit` as nullary tuple:
-   
+
     scala> val elems = List.empty[Tree]
     scala> val nullary = q"(..$elems)"
     nullary: universe.Tree = ()
@@ -989,7 +1033,7 @@ It is also common to treat `Unit` as nullary tuple:
 Quasiquotes also support deconstruction of tuples of arbitrary arity:
 
     scala> val q"(..$elems)" = q"(a, b)"
-    elems: List[universe.Tree] = List(a, b)   
+    elems: List[universe.Tree] = List(a, b)
 
 This pattern also matches expressions as single-element tuples:
 
@@ -1005,13 +1049,13 @@ And unit as nullary tuple:
 
 Blocks are a fundamental primitive to express sequence of actions or bindings. `q"..."` interpolator is an equivalent of a block. It allows to express more than one expression seperated by semicolon or a newline:
 
-    scala> val t = q"a; b; c" 
+    scala> val t = q"a; b; c"
     t: universe.Tree =
     {
       a;
       b;
       c
-    } 
+    }
 
 The only difference between `q"{...}"` and `q"..."` is handling of case when just a single element is present. `q"..."` always returns an element itself while a block still remains a block if a single element is not expression:
 
@@ -1063,7 +1107,7 @@ Except for empty tree which is not considered to be a block:
     scala.MatchError: <empty> (of class scala.reflect.internal.Trees$EmptyTree$)
       ... 32 elided
 
-Zero-element block is equivalent to synthetic unit (one that was inserted by the compiler rather than written by the user): 
+Zero-element block is equivalent to synthetic unit (one that was inserted by the compiler rather than written by the user):
 
     scala> val q"..$stats" = q"{}"
     stats: List[universe.Tree] = List()
@@ -1087,21 +1131,21 @@ There are two varieties of if expressions: those with else clause and without it
     thenp: universe.Tree = a
     elsep: universe.Tree = ()
 
-No-else clause is equivalent to else clause that contains a synthetic unit literal ([empty block](#block)). 
+No-else clause is equivalent to else clause that contains a synthetic unit literal ([empty block](#block)).
 
 #### Pattern Match {:#match}
 
 Pattern matching is cornerstone feature of Scala that lets you deconstruct values into their components:
-    
+
     q"$expr match { case ..$cases } "
 
 Where `expr` is some non-empty expression and each case is represented with a `cq"..."` quote:
 
-    cq"$pat if $expr => $expr" 
+    cq"$pat if $expr => $expr"
 
 Combination of the two forms allows to construct and deconstruct arbitrary pattern matches:
 
-    scala> val q"$expr match { case ..$cases }" = 
+    scala> val q"$expr match { case ..$cases }" =
                q"foo match { case _: Foo => 'foo case _ => 'notfoo }"
     expr: universe.Tree = foo
     cases: List[universe.CaseDef] = List(case (_: Foo) => scala.Symbol("foo"), case _ => scala.Symbol("notfoo"))
@@ -1130,19 +1174,19 @@ Try expression is used to handle possible error conditions and ensure consistent
     b: List[universe.CaseDef] = List()
     c: universe.Tree = <empty>
 
-    scala> val q"try $a catch { case ..$b } finally $c" = 
+    scala> val q"try $a catch { case ..$b } finally $c" =
                q"try t catch { case _: C => }"
     a: universe.Tree = t
     b: List[universe.CaseDef] = List(case (_: C) => ())
     c: universe.Tree = <empty>
 
-    scala> val q"try $a catch { case ..$b } finally $c" = 
+    scala> val q"try $a catch { case ..$b } finally $c" =
                q"try t finally f"
     a: universe.Tree = t
     b: List[universe.CaseDef] = List()
     c: universe.Tree = f
 
-Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. No-finally clause is represented with the help of [empty expression](#empty-expr). 
+Similarly to [pattern matching](#match) cases can be further deconstructed with `cq"..."`. No-finally clause is represented with the help of [empty expression](#empty-expr).
 
 #### Function {:#function-expr}
 
@@ -1162,7 +1206,7 @@ on type inference to infer its type. Last one explicitly defines function parame
 to implementation restriction second notation can only be used in parenthesis or inside other
 expression. If you leave them out you have to specify parameter types.
 
-Parameters are represented as [Vals](#val-var). If you want to programmatically create val that should have 
+Parameters are represented as [Vals](#val-var). If you want to programmatically create val that should have
 its type inferred you need to use [empty type](#empty-type):
 
     scala> val tpt = tq""
@@ -1176,9 +1220,9 @@ its type inferred you need to use [empty type](#empty-type):
 
 All of the given forms are represented in the same way and could be uniformly matched upon:
 
-    scala> List(f1, f2, f3).foreach { 
-             case q"(..$params) => $body" => 
-               println(s"params = $params, body = $body") 
+    scala> List(f1, f2, f3).foreach {
+             case q"(..$params) => $body" =>
+               println(s"params = $params, body = $body")
            }
     params = List(<synthetic> val x$5 = _), body = x$5.$plus(1)
     params = List(val a = _), body = a.$plus(1)
@@ -1193,7 +1237,7 @@ You can also tear arguments further apart:
     name: universe.TermName = a
     tpt: universe.Tree = Int
 
-It's recommended to use underscore pattern in place of [modifiers](#modifiers) even if you don't plan to work 
+It's recommended to use underscore pattern in place of [modifiers](#modifiers) even if you don't plan to work
 with them as parameters may contains additional flags which might cause match errors.
 
 #### Partial Function {:#partial-function}
@@ -1265,12 +1309,12 @@ For and For-Yield expressions allow to write monadic style comprehensions that d
     }))
 
 Each enumerator in the comprehension can be expressed with `fq"..."` interpolator:
- 
+
     scala> val enums = List(fq"x <- xs", fq"if x > 0", fq"y = x * 2")
     enums: List[universe.Tree] = List(`<-`((x @ _), xs), `if`(x.$greater(0)), (y @ _) = x.$times(2))
 
     scala> val `for-yield` = q"for (..$enums) yield y"
-    for-yield: universe.Tree 
+    for-yield: universe.Tree
 
 Simiarly one can deconstruct for-yield back into a list of enumerators and body:
 
@@ -1291,7 +1335,7 @@ New expression lets you construct an instance of given type possibly refining it
     parents: List[universe.Tree] = List(Foo(1), Bar)
     body: List[universe.Tree] = List(def baz = 2)
 
-See [templates](#templates) section for details. 
+See [templates](#templates) section for details.
 
 ### Types
 
@@ -1361,7 +1405,7 @@ Lastly [similarly to expressions](#super-this) one can select members through su
     scala> val superbar = tq"super.Bar"
     superbar: universe.Select = super.Bar
 
-    scala> val tq"$pre.super[$parent].$field" = superbar 
+    scala> val tq"$pre.super[$parent].$field" = superbar
     pre: universe.TypeName =
     parent: universe.TypeName =
     field: universe.Name = Bar
@@ -1454,7 +1498,7 @@ Analagously `Unit` type is considered to be nullary tuple:
     scala> val tq"(..$tpts)" = tq"_root_.scala.Unit"
     tpts: List[universe.Tree] = List()
 
-It's important to mention that pattern matching of reference to `Unit` is limited to either fully qualified path or a reference that contains symbols. (see [referential transparency](#referential-transparency))
+It's important to mention that pattern matching of reference to `Unit` is limited to either fully qualified path or a reference that contains symbols. (see [hygiene](#hygiene))
 
 #### Function Type {:#function-type}
 
@@ -1480,7 +1524,7 @@ Literal patterns are equivalent to literal expressions on AST level:
     scala> val equivalent = pq"1" equalsStructure q"1"
     equivalent: Boolean = true
 
-See chapter on [literal expressions](#literal) for details. 
+See chapter on [literal expressions](#literal) for details.
 
 #### Binding Pattern {:#binding-pattern}
 
@@ -1499,7 +1543,7 @@ Binding without explicit pattern is equivalent to the one with wildcard pattern:
     name: universe.Name = foo
     pat: universe.Tree = _
 
-See also [type pattern](#type-pattern) for an example of type variable binding. 
+See also [type pattern](#type-pattern) for an example of type variable binding.
 
 #### Extractor Pattern {:#extractor-pattern}
 
@@ -1639,7 +1683,7 @@ So template consists of:
 
         scala> val q"new { ..$earlydefns } with RequiresX" = withx
         earlydefns: List[universe.Tree] = List(val x = 1)
- 
+
 2. List of parents. A list of type identifiers with possibly an optional arguments to the first one in the list:
 
         scala> val q"new ..$parents"  = q"new Foo(1) with Bar[T]"
@@ -1651,7 +1695,7 @@ So template consists of:
         name: universe.Tree = Foo
         targs: List[universe.Tree] = List()
         argss: List[List[universe.Tree]] = List(List(1))
-   
+
    The others are just plain type trees:
 
         scala> val tq"$name[..$targs]" = parents.tail.head
@@ -1688,7 +1732,7 @@ Each val and var consistents of four components: modifiers, name, type tree and 
     tpt: universe.Tree = <type ?>
     rhs: universe.Tree = 2
 
-If type of the val isn't explicitly specified by the user an [empty type](#empty-type) is used as tpt. 
+If type of the val isn't explicitly specified by the user an [empty type](#empty-type) is used as tpt.
 
 Vals and vars are disjoint (they don't match one another):
 
@@ -1707,7 +1751,7 @@ Vars always have `MUTABLE` flag in their modifiers:
 #### Pattern Definitions {:#pattern-def}
 
 Pattern definitions allow to use scala pattern matching capabilities to define variables. Unlike
-val and var definitions, pattern definitions are not first-class and they are get represented 
+val and var definitions, pattern definitions are not first-class and they are get represented
 through combination of regular vals and vars and pattern matching:
 
     scala> val patdef = q"val (x, y) = (1, 2)"
@@ -1737,7 +1781,7 @@ This representation has a few side-effects on the usage of such definitions:
           a.$plus(b)
         }
 
-   Otherwise if a regular unquoting is used, the definitions will be nested in a block that will make 
+   Otherwise if a regular unquoting is used, the definitions will be nested in a block that will make
    them invisible in the scope where they are meant to be used:
 
         scala> val wrongtupsum = q"$patdef; a + b"
@@ -1754,7 +1798,7 @@ This representation has a few side-effects on the usage of such definitions:
           a.$plus(b)
         }
 
-2. One can only construct pattern definitions, not deconstruct them. 
+2. One can only construct pattern definitions, not deconstruct them.
 
 Generic form of pattern definition consists of modifiers, pattern, ascribed type and a right hand side:
 
@@ -1766,7 +1810,7 @@ Simiarly one can also construct a mutable pattern definition:
 
 #### Type Definition {:#type-def}
 
-Type definition have two possible shapes: abstract type definitions and alias type definitions. 
+Type definition have two possible shapes: abstract type definitions and alias type definitions.
 
 Abstract type definitions have the following shape:
 
@@ -1778,11 +1822,11 @@ Abstract type definitions have the following shape:
     low: universe.Tree = <empty>
     high: universe.Tree = List[T]
 
-Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.  
+Whenever one of the bounds isn\'t available it gets represented as [empty tree](#empty-expr). Here each of the type arguments is a type definition iteself.
 
 Another form of type definition is a type alias:
 
-    scala> val q"$mods type $name[..$args] = $tpt" = 
+    scala> val q"$mods type $name[..$args] = $tpt" =
                q"type Foo[T] = List[T]"
     mods: universe.Modifiers = Modifiers(, , Map())
     name: universe.TypeName = Foo
@@ -1797,7 +1841,7 @@ Due to low level uniform representation of type aliases and abstract types one m
     args: List[universe.TypeDef] = List(type T)
     tpt: universe.Tree =  <: List[T]
 
-Where `tpt` has a `TypeBoundsTree(low, high)` shape. 
+Where `tpt` has a `TypeBoundsTree(low, high)` shape.
 
 #### Method Definition {:#method}
 
@@ -1870,7 +1914,7 @@ An important difference in handling is caused by [SI-8399](https://issues.scala-
 members trait pattern might not match:
 
     scala> val q"trait $name { ..$stats }" = q"trait X { def x: Int }"
-    scala.MatchError: ... 
+    scala.MatchError: ...
 
 A workaround it to always extract modifiers with wildcard pattern:
 
@@ -1977,12 +2021,14 @@ Similarly one construct imports back from a programmatically created list of sel
 * **Tree deconstruction** refers to usages of quasiquotes as patterns to structurally tear trees apart.
 * **Unquoting** is a way of either putting thing in or extracting things out of quasiquote. Can be performed with `$` syntax within a quasiquote.
 * **Unquote splicing** (or just splicing) is another form of unquoting that flattens contents of the unquotee into a tree. Can be performed with either `..$` or `...$` syntax.
-* **Rank** is a degree of flattenning of unquotee: `rank($) == 0`, `rank(..$) == 1`, `rank(...$) == 2`. 
+* **Rank** is a degree of flattenning of unquotee: `rank($) == 0`, `rank(..$) == 1`, `rank(...$) == 2`.
 * [**Lifting**](#lifting) is a way to unquote non-tree values and transform them into trees with the help of Liftable typeclass.
-* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass. 
+* [**Unlifting**](#unlifting) is a way to unquote non-tree values out of quasiquote patterns with the help of Unliftable typeclass.
 
 ## Future prospects {:#future}
 
-* Referential transparency: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
+In [Project Palladium](www.scalareflect.org) we are working on the following features that target future versions of Scala:
+
+* Hygiene: [SI-7823](https://issues.scala-lang.org/browse/SI-7823)
 * Alternative to Scheme's ellipsis: [SI-8164](https://issues.scala-lang.org/browse/SI-8164)
-* Safety by construction 
+* Safety by construction
