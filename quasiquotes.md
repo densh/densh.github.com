@@ -13,6 +13,8 @@ Before you start reading this guide it's recommended to start a Scala REPL with 
 
     scala> val universe = reflect.runtime.universe; import universe._
 
+A wildcard import from a universe (be it a runtime reflection universe like here or a compile-time universe provided in macros) is all that's needed to use quasiquotes.
+
 REPL is the best place to explore quasiquotes and this guide will use it extensively to demonstrate handling of trees. All of the examples will assume that import.
 
 Additionally some examples that use `ToolBox` API might need a few more lines to get things rolling:
@@ -41,6 +43,35 @@ On the other side of spectrum there is also a `showRaw` pretty printer that show
 
     scala> println(showRaw(q"class C"))
     ClassDef(Modifiers(), TypeName("C"), List(), Template(List(Select(Ident(scala), TypeName("AnyRef"))), noSelfType, List(DefDef(Modifiers(), termNames.CONSTRUCTOR, List(), List(List()), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(())))))))
+
+## Dependencies {:#deps}
+
+### Scala 2.10 {:#deps-210}
+
+In Scala 2.10, quasiquotes are only available via the [macro paradise compiler plugin](http://docs.scala-lang.org/overviews/macros/paradise.html).
+
+In short, using quasiquotes in 2.10 is as simple as adding a single `addCompilerPlugin` line to your SBT build for the macro paradise plugin that enables quasiquotes and an additional `libraryDependencies` line for the supporting library that is necessary for quasiquotes to function in Scala 2.10. A full example is provided at [https://github.com/scalamacros/sbt-example-paradise](https://github.com/scalamacros/sbt-example-paradise).
+
+### Scala 2.11 {:#deps-211}
+
+In Scala 2.11, quasiquotes are shipped in the official Scala distribution as part of `scala-reflect.jar`, so you don't need to do anything special to use them - just don't forget to add a dependency on `scala-reflect`.
+
+### Typical SBT configuration {:#deps-sbt}
+
+Here's a neat SBT snippet taken from [Spire](https://github.com/non/spire) that allows you to use quasiquotes and cross-compile against both Scala 2.10 and 2.11:
+
+    libraryDependencies := {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        // if scala 2.11+ is used, quasiquotes are merged into scala-reflect
+        case Some((2, scalaMajor)) if scalaMajor >= 11 =>
+          libraryDependencies.value
+        // in Scala 2.10, quasiquotes are provided by macro paradise
+        case Some((2, 10)) =>
+          libraryDependencies.value ++ Seq(
+            compilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full),
+            "org.scalamacros" %% "quasiquotes" % "2.0.0" cross CrossVersion.binary)
+      }
+    }
 
 ## Intro {:#intro}
 
