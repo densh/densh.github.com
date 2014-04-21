@@ -54,7 +54,7 @@ In short, using quasiquotes in 2.10 is as simple as adding a single `addCompiler
 
 New `showCode` pretty printer is not available under 2.10.
 
-### Typical SBT configuration {:#setup-sbt}
+### SBT cross-compile {:#setup-sbt}
 
 Here's a neat SBT snippet taken from [Spire](https://github.com/non/spire) that allows you to use quasiquotes and cross-compile against both Scala 2.10 and 2.11:
 
