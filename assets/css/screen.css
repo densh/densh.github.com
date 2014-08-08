@@ -796,7 +796,6 @@ margin on the iframe, cause it breaks stuff. */
         box-sizing: border-box; 
         height: auto;
         min-height: 240px;
-        padding: 15% 0;
     }
 
     .blog-title {
