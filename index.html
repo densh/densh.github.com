@@ -14,9 +14,11 @@ about: 'about.html'
                 </a>
             {% endif %}
             <h1 class="blog-title">{{ site.name }}</h1>
-            <h2 class="blog-description"> 
-                {{ site.description }} 
-                <a href="http://twitter.com/den_sh">Twitter</a>. <a href="https://github.com/densh/">Github</a>.
+            <h2 class="blog-description">
+                {{ site.description }}
+                <a href="http://twitter.com/den_sh">Twitter</a>.
+                <a href="https://github.com/densh/">Github</a>.
+                <a href="mailto:denys.shabalin@epfl.ch">E-mail</a>.
                 <!--{% if page.about %} <a href='{{ site.baseurl }}{{ page.about }}'> About me </a> {% endif %}-->
             </h2>
         </div>
@@ -81,11 +83,11 @@ about: 'about.html'
         {% endif %}
 
         <!--<span class="page-number"> Page {{paginator.page}} of {{paginator.total_pages}} </span>-->
-        
-        {% if paginator.next_page %} 
+
+        {% if paginator.next_page %}
         <a class="older-posts" href="/page{{ paginator.next_page }}/" title="Next Page">Older Posts &raquo;</a>
-        {% endif %} 
+        {% endif %}
     </nav>
-    
+
 
 </main>
